@@ -1,0 +1,1963 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#33237f">
+<meta name="description" content="Pianificazione dei turni delle casse e del punto accoglienza.">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Casse">
+<style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Foglio Casse</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: fascia viola in testa, riquadri riepilogo, modulo, foglio casse con un colore per persona. */
+:root {
+  --bg: #f1f2f8;
+  --surface: #ffffff;
+  --fg: #1c1a2e;
+  --muted: #64627e;
+  --line: #e1e0ec;
+  --line-strong: #bdbbd3;
+  --band: #f6f6fb;
+  --accent: #5b3fd0;
+  --accent-fg: #ffffff;
+  --accent-soft: #ebe6fd;
+  --ink: #33237f;
+  --ink-2: #4b33b3;
+  --ink-fg: #ffffff;
+  --ink-muted: #cfc6ff;
+  --on-color: #ffffff;
+  --danger: #b3261e;
+  --ok: #12805c; --ok-soft: #d6f4e6;
+  --warn: #9a5800; --warn-soft: #fdebd0;
+  --c-gastro: #0e8a78; --s-gastro: #d9f2ed;
+  --c-lav: #2c66cc;    --s-lav: #dfe8fb;
+  --c-pane: #c0640f;   --s-pane: #fbe9d6;
+  --c-cucina: #c9363e; --s-cucina: #fadcdd;
+  --font-display: "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --w: 34px;
+  --lw: 120px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12111b; --surface: #1c1b29; --fg: #edecf7; --muted: #a09eba; --line: #2c2b40; --line-strong: #46445f; --band: #201f2f;
+    --accent: #a593ff; --accent-fg: #14121f; --accent-soft: #2a2550;
+    --ink: #2a1f66; --ink-2: #3a2a8c; --ink-fg: #ffffff; --ink-muted: #c3b8ff;
+    --on-color: #12111b; --danger: #ff8a80;
+    --ok: #4fd6a0; --ok-soft: #12352a; --warn: #f2b45c; --warn-soft: #3b2a12;
+    --c-gastro: #3fcfb8; --s-gastro: #13332f;
+    --c-lav: #7fa9f6;    --s-lav: #18264a;
+    --c-pane: #f2a75c;   --s-pane: #3b2814;
+    --c-cucina: #f27b80; --s-cucina: #42181c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12111b; --surface: #1c1b29; --fg: #edecf7; --muted: #a09eba; --line: #2c2b40; --line-strong: #46445f; --band: #201f2f;
+  --accent: #a593ff; --accent-fg: #14121f; --accent-soft: #2a2550;
+  --ink: #2a1f66; --ink-2: #3a2a8c; --ink-fg: #ffffff; --ink-muted: #c3b8ff;
+  --on-color: #12111b; --danger: #ff8a80;
+    --ok: #4fd6a0; --ok-soft: #12352a; --warn: #f2b45c; --warn-soft: #3b2a12;
+  --c-gastro: #3fcfb8; --s-gastro: #13332f;
+  --c-lav: #7fa9f6;    --s-lav: #18264a;
+  --c-pane: #f2a75c;   --s-pane: #3b2814;
+  --c-cucina: #f27b80; --s-cucina: #42181c;
+  color-scheme: dark;
+}
+.g-gastro { --g: var(--c-gastro); --gs: var(--s-gastro); }
+.g-lav { --g: var(--c-lav); --gs: var(--s-lav); }
+.g-pane { --g: var(--c-pane); --gs: var(--s-pane); }
+.g-cucina { --g: var(--c-cucina); --gs: var(--s-cucina); }
+.g-cassa { --g: var(--accent); --gs: var(--accent-soft); }
+.bar.person { background: hsl(var(--h) 52% 42%); color: #fff; box-shadow: 0 2px 6px hsl(var(--h) 52% 42% / .35); }
+.g-viola { --g: var(--accent); --gs: var(--accent-soft); }
+
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; line-height: 1.45; }
+.app { max-width: 1320px; margin-inline: auto; padding-inline: 16px; padding-block: 18px 44px; display: flex; flex-direction: column; gap: 18px; }
+
+/* testata */
+.hero { position: relative; overflow: hidden; border-radius: 16px; color: var(--ink-fg); padding: 22px 24px; display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 16px 24px;
+  background-color: var(--ink);
+  background-image: linear-gradient(rgba(255,255,255,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.07) 1px, transparent 1px), linear-gradient(120deg, var(--ink) 30%, var(--ink-2));
+  background-size: 26px 26px, 26px 26px, 100% 100%; }
+.eyebrow { font-size: 11.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-muted); }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: 52px; line-height: .95; margin: 6px 0 0; letter-spacing: .005em; text-wrap: balance; }
+.sub { color: var(--ink-muted); font-size: 13px; margin-top: 8px; display: flex; align-items: center; gap: 8px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c-gastro); box-shadow: 0 0 0 3px rgba(255,255,255,.15); }
+.tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.days { display: flex; align-items: center; gap: 6px; }
+.hero .btn, .hero input { color: var(--ink-fg); background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.28); color-scheme: dark; }
+.hero .btn:hover { background: rgba(255,255,255,.22); border-color: rgba(255,255,255,.5); }
+.hero .btn.light { background: var(--ink-fg); color: var(--ink); border-color: var(--ink-fg); }
+.hero .btn.light:hover { background: var(--ink-muted); border-color: var(--ink-muted); }
+
+.btn { font: inherit; font-weight: 600; color: var(--fg); background: var(--surface); border: 1px solid var(--line-strong); border-radius: 8px; padding: 7px 14px; cursor: pointer; min-height: 38px; }
+.btn:hover { border-color: var(--accent); }
+.btn:disabled { opacity: .6; cursor: progress; }
+.btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.btn.primary:hover { filter: brightness(1.1); }
+.btn.danger { color: var(--danger); border-color: var(--danger); background: transparent; }
+.btn.danger.armed { background: var(--danger); color: var(--surface); }
+.btn.icon { padding-inline: 12px; font-size: 16px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+input, select { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line-strong); border-radius: 8px; padding: 7px 10px; min-height: 38px; min-width: 0; }
+
+/* riepilogo */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.tile { background: var(--gs); border-radius: 12px; padding: 12px 16px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tile b { font-family: var(--font-display); font-size: 34px; line-height: 1; font-weight: 700; color: var(--g); font-variant-numeric: tabular-nums; }
+.tile span { font-size: 12.5px; color: var(--fg); opacity: .8; }
+
+/* modulo */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; box-shadow: 0 1px 2px rgba(20,16,60,.05); }
+.panel h2 { font-family: var(--font-display); font-weight: 700; font-size: 21px; margin: 0 0 12px; letter-spacing: .02em; display: flex; align-items: center; gap: 8px; }
+.panel h2::before { content: ""; width: 10px; height: 10px; border-radius: 3px; background: var(--accent); }
+.panel.editing { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+form { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+.f { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.f label { font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.f.nome { flex: 1 1 200px; }
+.f.riga select, .f.ora select { width: 100%; }
+.f.riga { flex: 1 1 240px; }
+.f.ora { flex: 0 0 100px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.msg { min-height: 20px; margin-top: 10px; font-size: 13px; color: var(--danger); }
+.msg.ok { color: var(--muted); }
+
+/* persone */
+.people { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chip { font: inherit; display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px 4px 4px; border-radius: 999px; cursor: pointer; color: var(--fg); background: var(--surface); border: 1px solid var(--line); }
+.chip:hover { border-color: var(--line-strong); }
+.av { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 600; color: #fff; background: hsl(var(--h) 55% 45%); }
+.chip em { font-style: normal; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12px; }
+.chip[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.empty { color: var(--muted); }
+
+/* foglio */
+.sheet { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: 0 1px 2px rgba(20,16,60,.05); }
+.sheethead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 18px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.sheethead h2 { font-family: var(--font-display); font-weight: 700; font-size: 21px; margin: 0; letter-spacing: .02em; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 12px; height: 12px; border-radius: 3px; background: var(--g); }
+.scroller { overflow-x: auto; }
+.board { display: grid; grid-template-columns: var(--lw) calc(var(--n) * var(--w)); width: max-content; }
+.corner, .rowlabel, .covlabel { position: sticky; left: 0; z-index: 3; border-right: 1px solid var(--line-strong); }
+.corner { height: 52px; background: var(--band); border-bottom: 1px solid var(--line-strong); display: flex; align-items: end; padding: 0 12px 6px; font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.times { display: flex; height: 52px; border-bottom: 1px solid var(--line-strong); background: var(--band); }
+.t { flex: 0 0 var(--w); width: var(--w); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 5px; font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.t.alt { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.t span { writing-mode: vertical-rl; transform: rotate(180deg); }
+.t.h { color: var(--accent); font-weight: 700; }
+.rowlabel { display: flex; flex-direction: column; justify-content: center; height: 50px; padding: 0 12px 0 10px; background: var(--gs); border-left: 6px solid var(--g); border-bottom: 1px solid var(--surface); }
+.rowlabel b { font-family: var(--font-display); font-weight: 700; font-size: 19px; line-height: 1.02; color: var(--fg); }
+.rowlabel small { font-size: 9.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--g); }
+.lane { position: relative; height: 50px; border-bottom: 1px solid var(--line); cursor: cell;
+  background-color: color-mix(in srgb, var(--gs) 35%, var(--surface));
+  background-image: linear-gradient(to right, var(--line-strong) 1px, transparent 1px), linear-gradient(to right, var(--line) 1px, transparent 1px), linear-gradient(to right, color-mix(in srgb, var(--accent) 5%, transparent) 50%, transparent 50%);
+  background-size: calc(2 * var(--w)) 100%, var(--w) 100%, calc(4 * var(--w)) 100%;
+  background-position: 0 0, 0 0, 0 0; }
+.lane:hover { background-color: color-mix(in srgb, var(--gs) 70%, var(--surface)); }
+.bar { position: absolute; top: 6px; bottom: 6px; padding: 0 10px; overflow: hidden; display: flex; flex-direction: column; justify-content: center; text-align: left; font: inherit; line-height: 1.12; cursor: pointer; white-space: nowrap;
+  color: var(--on-color); background: var(--g); border: 0; border-radius: 7px; z-index: 1; box-shadow: 0 2px 6px color-mix(in srgb, var(--g) 35%, transparent); }
+.bar:hover { filter: brightness(1.08); }
+.bar b { font-weight: 600; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; }
+.bar small { font-size: 11px; opacity: .85; font-variant-numeric: tabular-nums; }
+.bar.sel { outline: 3px solid var(--fg); outline-offset: 1px; z-index: 2; }
+.bar.dim { opacity: .22; box-shadow: none; }
+.covlabel { display: flex; align-items: center; height: 38px; padding-left: 16px; background: var(--band); font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.cov { display: flex; height: 38px; background: var(--band); }
+.c { flex: 0 0 var(--w); width: var(--w); display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--fg); background: color-mix(in srgb, var(--accent) calc(var(--p) * 1%), transparent); }
+.c.hi { color: var(--accent-fg); }
+.c.zero { color: var(--line-strong); font-weight: 400; }
+.hint { color: var(--muted); font-size: 12.5px; padding: 10px 16px; border-top: 1px solid var(--line); }
+/* import da foto */
+.imp { display: flex; flex-direction: column; gap: 14px; }
+.imp-top { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+.imp-top img { width: 150px; max-width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--line); object-fit: cover; }
+.imp-info { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.imp-status { font-weight: 600; display: flex; align-items: center; gap: 10px; }
+.spin { width: 16px; height: 16px; border-radius: 50%; border: 2.5px solid var(--accent-soft); border-top-color: var(--accent); }
+@media (prefers-reduced-motion: no-preference) { .spin { animation: spin .8s linear infinite; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+.imp-note { color: var(--muted); font-size: 13px; }
+.imp-date { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; }
+.tbl-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+.tbl { border-collapse: collapse; width: 100%; min-width: 760px; font-size: 13px; }
+.tbl th { text-align: left; font-size: 10.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); background: var(--band); padding: 8px 8px; border-bottom: 1px solid var(--line); }
+.tbl td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.tbl tr:last-child td { border-bottom: 0; }
+.tbl tr.off td { opacity: .45; }
+.tbl input[type="text"], .tbl select { width: 100%; min-height: 34px; padding: 5px 8px; }
+.tbl input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
+.tbl .w-nome { min-width: 190px; }
+.tbl .w-post { min-width: 200px; }
+.tbl .w-ora { width: 92px; }
+.src { font-size: 11.5px; color: var(--muted); }
+.warn { font-size: 12px; color: var(--danger); }
+.lvl { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 999px; }
+.lvl.alta { background: var(--s-gastro); color: var(--c-gastro); }
+.lvl.media { background: var(--s-pane); color: var(--c-pane); }
+.lvl.bassa { background: var(--s-cucina); color: var(--c-cucina); }
+
+.tbl tr.dayrow td { background: var(--accent-soft); font-family: var(--font-display); font-weight: 700; font-size: 16px; color: var(--fg); padding: 7px 10px; }
+.tbl tr.dayrow td span { font-family: var(--font-body); font-weight: 400; font-size: 12px; color: var(--muted); margin-left: 8px; }
+.tbl .w-giorno { min-width: 140px; }
+.tbl .w-tipo { width: 104px; }
+.imp-sum { display: flex; flex-wrap: wrap; gap: 8px; }
+.imp-sum span { font-size: 12.5px; padding: 3px 10px; border-radius: 999px; background: var(--band); border: 1px solid var(--line); }
+.imp-sum b { font-variant-numeric: tabular-nums; }
+
+/* da assegnare */
+.todo { background: var(--surface); border: 1.5px dashed var(--line-strong); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.todo h2 { font-family: var(--font-display); font-weight: 700; font-size: 19px; margin: 0; display: flex; align-items: baseline; gap: 10px; }
+.todo h2 span { font-family: var(--font-body); font-size: 12.5px; font-weight: 400; color: var(--muted); }
+.todo-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.todo-card { font: inherit; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 7px 12px; border-radius: 9px; cursor: pointer; color: var(--fg); background: var(--accent-soft); border: 1px solid transparent; text-align: left; }
+.todo-card:hover { border-color: var(--accent); }
+.todo-card.sel { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.todo-card b { font-weight: 600; font-size: 13px; }
+.todo-card small { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* riposi e ferie */
+.ass { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.ass-col { border-radius: 12px; padding: 12px 14px; background: var(--gs); min-width: 0; }
+.ass-col h3 { margin: 0 0 8px; font-family: var(--font-display); font-weight: 700; font-size: 18px; color: var(--g); display: flex; align-items: baseline; gap: 8px; }
+.ass-col h3 span { font-family: var(--font-body); font-size: 12px; font-weight: 600; color: var(--fg); opacity: .7; }
+.ass-col ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.ass-col li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 4px 4px 10px; border-radius: 7px; background: var(--surface); font-size: 13px; }
+.ass-col li.empty { background: transparent; padding-left: 0; }
+.x { font: inherit; font-size: 16px; line-height: 1; width: 28px; height: 28px; border-radius: 6px; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
+.x:hover { background: var(--bg); color: var(--danger); }
+.ass-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-top: 14px; }
+.ass-form .f.nome { flex: 1 1 220px; }
+.ass-form .f.tipo { flex: 0 0 130px; }
+.ass-form .f.tipo select { width: 100%; }
+
+/* stato del piano */
+.plan { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 14px 18px; border-radius: 14px; border: 1.5px solid var(--pc); background: var(--ps); }
+.plan.ok { --pc: var(--ok); --ps: var(--ok-soft); }
+.plan.warn { --pc: var(--warn); --ps: var(--warn-soft); }
+.plan-badge { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: .02em; color: var(--pc); }
+.plan-badge::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--pc); box-shadow: 0 0 0 4px color-mix(in srgb, var(--pc) 25%, transparent); }
+.plan-items { display: flex; flex-wrap: wrap; gap: 6px; flex: 1 1 300px; min-width: 0; }
+.plan-items span { font-size: 13px; padding: 3px 10px; border-radius: 999px; background: var(--surface); border: 1px solid color-mix(in srgb, var(--pc) 35%, transparent); color: var(--fg); }
+.app.done .sheet { border-color: var(--ok); box-shadow: 0 0 0 3px var(--ok-soft), 0 12px 32px color-mix(in srgb, var(--ok) 22%, transparent); }
+.app.done .bar { filter: saturate(1.3) brightness(1.06); }
+.app.done .dot { background: var(--ok); box-shadow: 0 0 0 3px rgba(255,255,255,.2), 0 0 12px var(--ok); }
+@media (prefers-reduced-motion: no-preference) { .app.done .sheet { transition: box-shadow .4s, border-color .4s; } }
+
+/* presentazione */
+.app.present { max-width: none; }
+.app.present > *:not(.hero):not(.sheet):not(.plan) { display: none !important; }
+.app.present .sheet .hint { display: none; }
+.app.present .lane, .app.present .rowlabel { height: 62px; }
+.app.present .bar b { font-size: 15px; }
+.app.present .bar small { font-size: 12.5px; }
+.app.present .hero .btn:not(#present), .app.present .hero input { display: none; }
+
+/* cassa di emergenza */
+.lane.emerg { cursor: not-allowed; background-image: repeating-linear-gradient(135deg, color-mix(in srgb, var(--danger) 9%, transparent) 0 8px, transparent 8px 16px); }
+.lane.emerg:hover { background-color: color-mix(in srgb, var(--gs) 35%, var(--surface)); }
+.rowlabel small.emerg-tag { color: var(--danger); }
+
+/* rigenera */
+.regen { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.regen .legend { margin-right: 6px; }
+.btn.confirm { background: var(--warn); border-color: var(--warn); color: var(--surface); }
+.app.present .regen .btn { display: none; }
+
+/* da decidere */
+.modal { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px; background: color-mix(in srgb, #0b0a14 55%, transparent); }
+.modal-box { width: min(560px, 100%); max-height: calc(100% - 32px); overflow: auto; background: var(--surface); color: var(--fg); border-radius: 16px; padding: 20px 22px; box-shadow: 0 20px 60px rgba(0,0,0,.3); display: flex; flex-direction: column; gap: 14px; }
+.modal-box h2 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 26px; }
+.modal-sub { margin: 0; color: var(--muted); font-size: 13.5px; }
+.dec-list { display: flex; flex-direction: column; gap: 8px; }
+.dec-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 10px 12px; border-radius: 10px; background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent); }
+.dec-row b { font-weight: 600; }
+.dec-row small { display: block; color: var(--muted); font-variant-numeric: tabular-nums; }
+.dec-row .actions { gap: 6px; }
+.todo.dec { border-color: var(--warn); }
+
+.ass-long { margin: 12px 0 0; font-size: 13px; color: var(--muted); }
+.ass-long b { color: var(--fg); font-weight: 600; }
+
+/* punto accoglienza */
+.g-acc { --g: var(--ok); --gs: var(--ok-soft); }
+.acchead { grid-column: 1 / -1; padding: 10px 0 8px; background: var(--band); border-top: 2px solid var(--line-strong); border-bottom: 1px solid var(--line); }
+.acchead span { position: sticky; left: 12px; font-family: var(--font-display); font-weight: 700; font-size: 17px; letter-spacing: .02em; color: var(--ok); }
+.c.accok { background: color-mix(in srgb, var(--ok) 20%, transparent); color: var(--ok); }
+.c.accgap { background: color-mix(in srgb, var(--danger) 18%, transparent); color: var(--danger); font-weight: 700; }
+
+.dec-row small.dec-hint { color: var(--ok); font-weight: 600; margin-top: 2px; }
+
+.bar.mini { flex-direction: row; align-items: center; gap: 6px; padding: 0 6px; }
+.bar.mini b { font-size: 11px; }
+.bar.mini small { font-size: 10px; }
+.app.present .bar.mini b { font-size: 12px; }
+
+.todo.esclusi { opacity: .8; }
+.todo.esclusi h2 { font-size: 16px; }
+
+/* app indipendente */
+.filebar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; padding: 14px 18px; border-radius: 14px; background: var(--accent-soft); border: 1.5px solid var(--accent); }
+.filebar span { font-size: 14px; min-width: 0; flex: 1 1 320px; }
+.set-note { margin: 0 0 12px; color: var(--muted); font-size: 13px; max-width: 75ch; }
+.set-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 14px; }
+.set-grid textarea { font: inherit; font-size: 13px; color: var(--fg); background: var(--bg); border: 1px solid var(--line-strong); border-radius: 8px; padding: 8px 10px; resize: vertical; width: 100%; box-sizing: border-box; }
+.f.key { max-width: 520px; margin-bottom: 8px; }
+.f.key input { width: 100%; box-sizing: border-box; }
+
+@media (max-width: 560px) {
+  .hero { padding: 18px; }
+  h1 { font-size: 40px; }
+  .f.ora { flex: 1 1 28%; }
+  :root { --lw: 96px; }
+  .rowlabel b { font-size: 14.5px; }
+  .actions { width: 100%; }
+  .tile b { font-size: 28px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .btn, .bar, .chip { transition: filter .12s, opacity .15s, border-color .12s, box-shadow .12s; }
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="hero">
+    <div>
+      <div class="eyebrow">Turni casse &middot; 07:00 - 00:00</div>
+      <h1 id="titolo">Domenica 11/10</h1>
+      <div class="sub"><span class="dot"></span><span id="stato">Caricamento</span></div>
+    </div>
+    <div class="tools">
+      <div class="days">
+        <button class="btn icon" id="prev" type="button" aria-label="Giorno precedente">&larr;</button>
+        <input type="date" id="giorno" aria-label="Giorno">
+        <button class="btn icon" id="next" type="button" aria-label="Giorno successivo">&rarr;</button>
+      </div>
+      <button class="btn" id="foto" type="button">Foto del giorno</button>
+      <button class="btn" id="fotoSett" type="button">Foto della settimana</button>
+      <input type="file" id="fotoInput" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+      <button class="btn" id="present" type="button">Presenta</button>
+      <button class="btn" id="esporta" type="button">Esporta piano</button>
+      <button class="btn" id="apri" type="button">Apri piano</button>
+      <input type="file" id="apriInput" accept=".json,application/json" hidden>
+      <button class="btn" id="impostazioni" type="button">Impostazioni</button>
+      <button class="btn light" id="pdf" type="button">Scarica PDF</button>
+    </div>
+  </header>
+
+  <div class="filebar" id="fileBar" hidden role="alertdialog" aria-labelledby="fileTxt">
+    <span id="fileTxt"></span>
+    <div class="actions"><button class="btn primary" id="fileOk" type="button">Apri questo piano</button><button class="btn" id="fileNo" type="button">Annulla</button></div>
+  </div>
+
+  <section class="panel" id="setSec" hidden aria-labelledby="setTitle">
+    <h2 id="setTitle">Impostazioni</h2>
+    <p class="set-note">Nomi e regole restano solo su questo dispositivo e viaggiano dentro il file del piano: non sono pubblicati da nessuna parte. Un nome per riga, COGNOME NOME.</p>
+    <div class="set-grid">
+      <div class="f"><label for="cfgStaff">Dipendenti</label><textarea id="cfgStaff" rows="9"></textarea></div>
+      <div class="f"><label for="cfgBox">Sempre al punto accoglienza</label><textarea id="cfgBox" rows="4"></textarea></div>
+      <div class="f"><label for="cfgChiedi">Da chiedere ogni volta: casse o accoglienza</label><textarea id="cfgChiedi" rows="4"></textarea></div>
+      <div class="f"><label for="cfgFisse">Sempre tra la cassa 7 e la 10</label><textarea id="cfgFisse" rows="3"></textarea></div>
+      <div class="f"><label for="cfgEsclusi">Mai nella pianificazione</label><textarea id="cfgEsclusi" rows="3"></textarea></div>
+      <div class="f"><label for="cfgLunghe">Assenze lunghe (COGNOME NOME; motivo)</label><textarea id="cfgLunghe" rows="3"></textarea></div>
+    </div>
+    <div class="f key"><label for="cfgKey">Chiave API Anthropic, per leggere le foto</label><input id="cfgKey" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-..."></div>
+    <p class="set-note">La chiave resta solo su questo dispositivo e non entra mai nel file del piano. Ogni lettura di una foto è addebitata sul tuo account Anthropic. Sui tablet che servono solo a consultare il piano non serve.</p>
+    <div class="actions"><button class="btn primary" id="cfgSave" type="button">Salva impostazioni</button></div>
+    <div class="msg" id="cfgMsg" role="status" aria-live="polite"></div>
+  </section>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="plan" id="plan" role="status" hidden></div>
+
+  <section class="panel" id="panel" aria-labelledby="ftitle">
+    <h2 id="ftitle">Nuovo turno</h2>
+    <form id="form" autocomplete="off">
+      <div class="f nome"><label for="nome">Nome</label><input id="nome" list="nomi" placeholder="Scrivi per cercare il nome" required maxlength="40"><datalist id="nomi"></datalist></div>
+      <div class="f riga"><label for="riga">Cassa</label><select id="riga"></select></div>
+      <div class="f ora"><label for="da">Dalle</label><select id="da"></select></div>
+      <div class="f ora"><label for="a">Alle</label><select id="a"></select></div>
+      <div class="actions">
+        <button class="btn primary" id="salva" type="submit">Aggiungi turno</button>
+        <button class="btn" id="annulla" type="button" hidden>Annulla</button>
+        <button class="btn danger" id="elimina" type="button" hidden>Elimina</button>
+      </div>
+    </form>
+    <div class="msg" id="msg" role="status" aria-live="polite"></div>
+  </section>
+
+  <section class="panel" id="impPanel" aria-labelledby="impTitle" hidden>
+    <h2 id="impTitle">Turni letti dalla foto</h2>
+    <div class="imp">
+      <div class="imp-top">
+        <img id="impImg" alt="Foto dell'orario caricata">
+        <div class="imp-info">
+          <div class="imp-status" id="impStatus"></div>
+          <div class="imp-note" id="impNote"></div>
+          <div class="imp-date" id="impDate" hidden></div>
+          <div class="imp-date" id="impWeekBox" hidden><label for="impWeek">Settimana che inizia lunedì</label><input type="date" id="impWeek"></div>
+          <div class="actions"><button class="btn" id="impStop" type="button">Interrompi</button></div>
+        </div>
+      </div>
+      <div class="imp-sum" id="impSum" hidden></div>
+      <div class="tbl-wrap" id="impTblWrap" hidden>
+        <table class="tbl">
+          <thead><tr><th>Usa</th><th>Giorno</th><th>Nome</th><th>Turno</th><th>Dalle</th><th>Alle</th><th>Cassa</th><th>Lettura</th></tr></thead>
+          <tbody id="impRows"></tbody>
+        </table>
+      </div>
+      <div class="actions" id="impActions" hidden>
+        <button class="btn primary" id="impAdd" type="button">Aggiungi</button>
+        <button class="btn" id="impAuto" type="button">Riassegna casse</button>
+        <button class="btn" id="impCancel" type="button">Scarta</button>
+      </div>
+      <div class="msg" id="impMsg" role="status" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <div class="people" id="chips" aria-label="Persone in turno"></div>
+
+  <section class="todo" id="todo" hidden aria-labelledby="todoTitle">
+    <h2 id="todoTitle">Da assegnare <span id="todoCount"></span></h2>
+    <div class="actions"><button class="btn primary" id="autoBtn" type="button">Assegna casse automaticamente</button></div>
+    <div class="todo-list" id="todoList"></div>
+  </section>
+
+  <div class="modal" id="decModal" hidden role="dialog" aria-modal="true" aria-labelledby="decTitle">
+    <div class="modal-box">
+      <h2 id="decTitle">Dove lavorano oggi?</h2>
+      <p class="modal-sub" id="decSub"></p>
+      <div class="dec-list" id="decModalList"></div>
+      <div class="actions"><button class="btn" id="decLater" type="button">Decido dopo</button></div>
+    </div>
+  </div>
+
+  <section class="todo dec" id="decSec" hidden aria-labelledby="decSecTitle">
+    <h2 id="decSecTitle">Da decidere <span>Casse o punto accoglienza?</span></h2>
+    <div class="dec-list" id="decList"></div>
+  </section>
+
+  <section class="sheet" id="boxSec" aria-labelledby="boxTitle">
+    <div class="sheethead">
+      <h2 id="boxTitle">Punto accoglienza (box)</h2>
+      <div class="legend"><span>Copertura obbligatoria dalle 07:00 alle 21:00. Clicca la riga per aggiungere un turno.</span></div>
+    </div>
+    <div class="scroller"><div class="board" id="boardBox" style="--n:35"></div></div>
+  </section>
+
+  <section class="sheet">
+    <div class="sheethead">
+      <h2>Casse</h2>
+      <div class="regen">
+        <span class="legend"><span>Ogni persona ha il suo colore</span></span>
+        <button class="btn" id="regenG" type="button">Rigenera giorno</button>
+        <button class="btn" id="regenS" type="button">Rigenera settimana</button>
+        <button class="btn" id="regenNo" type="button" hidden>Annulla</button>
+      </div>
+    </div>
+    <div class="scroller"><div class="board" id="board" style="--n:35"></div></div>
+    <div class="hint">Clicca una cella vuota per preparare un turno da quell'orario. Clicca un turno per modificarlo o eliminarlo.</div>
+  </section>
+
+  <section class="panel" aria-labelledby="assTitle">
+    <h2 id="assTitle">Riposi e ferie</h2>
+    <div class="ass">
+      <div class="ass-col g-lav"><h3>Riposi <span id="cnt-riposo">0</span></h3><ul id="ass-riposo"></ul></div>
+      <div class="ass-col g-pane"><h3>Ferie <span id="cnt-ferie">0</span></h3><ul id="ass-ferie"></ul></div>
+    </div>
+    <p class="ass-long" id="assLong"></p>
+    <form class="ass-form" id="assForm" autocomplete="off">
+      <div class="f nome"><label for="assNome">Nome</label><input id="assNome" list="nomi" placeholder="Scrivi per cercare il nome" maxlength="40"></div>
+      <div class="f tipo"><label for="assTipo">Tipo</label><select id="assTipo"><option value="riposo">Riposo</option><option value="ferie">Ferie</option></select></div>
+      <button class="btn" type="submit">Segna</button>
+    </form>
+    <div class="msg" id="assMsg" role="status" aria-live="polite"></div>
+  </section>
+
+  <section class="todo esclusi" id="accSec" hidden aria-labelledby="accTitle">
+    <h2 id="accTitle">Esclusi dalla pianificazione <span>Non vanno né in cassa né al punto accoglienza. Clicca per modificare o eliminare il turno.</span></h2>
+    <div class="todo-list" id="accList"></div>
+  </section>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+(function () {
+  /* ---------- impostazioni locali (nomi e regole: solo su questo dispositivo) ---------- */
+  var CFG_KEY = "app:config", KEY_API = "app:apikey";
+  function caricaCfg() {
+    var d = { staff: [], box: [], chiedi: [], fisse710: [], esclusi: [], lunghe: [] };
+    try {
+      var c = JSON.parse(window.localStorage.getItem(CFG_KEY) || "{}");
+      Object.keys(d).forEach(function (k) { if (Array.isArray(c[k])) d[k] = c[k]; });
+    } catch (e) {}
+    return d;
+  }
+  var CFG = caricaCfg();
+  var SLOTS = [];
+  var T0 = 7 * 60, T1 = 24 * 60, STEP = 30;
+  function lab(m) { return String(Math.floor(m / 60) % 24).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"); }
+  for (var m = T0; m <= T1; m += STEP) SLOTS.push(lab(m));
+  var N = SLOTS.length, W = 34;
+  var ROWS = ["CASSA 1", "CASSA 2", "CASSA 3", "CASSA 4", "CASSA 5", "CASSA 6", "CASSA 7", "CASSA 8", "CASSA 9", "CASSA 10", "CASSA 11"];
+  var REP = {}; ROWS.forEach(function (r) { REP[r] = "cassa"; });
+  var REP_NOME = { cassa: "Cassa" };
+  var STAFF = CFG.staff;
+  // Criteri casse
+  // Casse che non si pianificano mai
+  var BLOCCATE = { "CASSA 1": "Emergenza", "CASSA 5": "Non si usa", "CASSA 11": "Non si usa" };
+  function bloccataMsg(r) { return r + (r === "CASSA 1" ? " è riservata alle emergenze" : " non si riempie mai") + ": non si pianifica nessuno."; }
+  // Ordine di apertura delle casse
+  var CASSA_ORDINE = [2, 3, 4, 6, 7, 8, 9, 10].map(function (n) { return "CASSA " + n; });
+  // Persone con casse fisse
+  var VINCOLI = [{ nomi: CFG.fisse710, casse: [7, 8, 9, 10] }];
+  function casseAmmesse(nome) {
+    var v = VINCOLI.filter(function (x) { return inLista(nome, x.nomi); })[0];
+    return v ? v.casse.map(function (n) { return "CASSA " + n; }) : null;
+  }
+  // Chi chiude a mezzanotte va sempre in cassa 2
+  var CASSE_CHIUSURA = ["CASSA 2", "CASSA 3"]; // chi chiude a mezzanotte: prima la 2, se occupata la 3
+  function chiude(s) { return s.a === SLOTS[SLOTS.length - 1]; }
+  var ACC_FISSA = CFG.box;
+  var ESCLUSI = CFG.esclusi; // mai nella pianificazione casse
+  // "" = piano casse; "da decidere" = persona da chiedere ancora senza scelta; altrimenti fuori dal piano
+  function collocazione(s) {
+    var f = fuori(s.nome); if (f) return f;
+    if (s.dest === "accoglienza") return "punto accoglienza";
+    if (inLista(s.nome, ACC_CHIEDI) && s.dest !== "casse") return "da decidere";
+    return "";
+  }
+
+  /* ---------- punto accoglienza: copertura 07:00 - 21:00 ---------- */
+  var ACC_DA = "07:00", ACC_A = "21:00";
+  function accoShifts(list) { return list.filter(function (s) { return collocazione(s) === "punto accoglienza"; }); }
+  function accTracks(list) {
+    var tr = [];
+    list.slice().sort(function (x, y) { return SLOTS.indexOf(x.da) - SLOTS.indexOf(y.da); }).forEach(function (s) {
+      var d = SLOTS.indexOf(s.da);
+      var t = tr.filter(function (t) { return SLOTS.indexOf(t[t.length - 1].a) <= d; })[0];
+      if (!t) { t = []; tr.push(t); }
+      t.push(s);
+    });
+    return tr;
+  }
+  function accCounts(list) {
+    var c = new Array(N).fill(0);
+    list.forEach(function (s) { for (var i = SLOTS.indexOf(s.da); i < SLOTS.indexOf(s.a); i++) c[i]++; });
+    return c;
+  }
+  function accGaps(c) {
+    var out = [], i0 = SLOTS.indexOf(ACC_DA), i1 = SLOTS.indexOf(ACC_A);
+    for (var i = i0; i < i1; i++) {
+      if (c[i]) continue;
+      var j = i; while (j + 1 < i1 && !c[j + 1]) j++;
+      out.push("Accoglienza scoperta tra le " + SLOTS[i] + " e le " + SLOTS[j + 1]);
+      i = j;
+    }
+    return out;
+  }
+  // Assenze lunghe: fuori dal piano finché non rientrano
+  var LUNGHE = CFG.lunghe;
+  function lunga(nome) { var l = LUNGHE.filter(function (x) { return stessoNome(nome, x[0]); })[0]; return l ? l[1] : ""; }
+  function fuori(nome) {
+    if (inLista(nome, ACC_FISSA)) return "punto accoglienza";
+    if (inLista(nome, ESCLUSI)) return "escluso dalla pianificazione";
+    var l = lunga(nome); return l ? "in " + l : "";
+  }
+  function fuoriFrase(nome) {
+    var f = fuori(nome);
+    return f === "punto accoglienza" ? " sta al punto accoglienza" : f.indexOf("in ") === 0 ? " è " + f : " è escluso dalla pianificazione";
+  }
+  var ACC_CHIEDI = CFG.chiedi;
+  function parole(n) { return String(n || "").toUpperCase().replace(/[^A-Z' ]/g, " ").split(/\s+/).filter(Boolean); }
+  function dist1(a, b) {
+    // vero se a e b differiscono al massimo di una lettera (aggiunta, tolta o cambiata)
+    if (Math.abs(a.length - b.length) > 1) return false;
+    var i = 0, j = 0, e = 0;
+    while (i < a.length && j < b.length) {
+      if (a[i] === b[j]) { i++; j++; continue; }
+      if (++e > 1) return false;
+      if (a.length > b.length) i++; else if (b.length > a.length) j++; else { i++; j++; }
+    }
+    return e + (a.length - i) + (b.length - j) <= 1;
+  }
+  function parolaSimile(t, u) {
+    if (t === u) return true;
+    if (t.length >= 5 && u.length >= 5 && dist1(t, u)) return true;
+    // cognome tagliato in lettura (es. solo la parte finale del cognome)
+    var corta = t.length < u.length ? t : u, lunga = t.length < u.length ? u : t;
+    return corta.length >= 3 && lunga.slice(-corta.length) === corta;
+  }
+  function stessoNome(nome, x) {
+    var w = parole(nome), v = parole(x);
+    if (w.length < 2 || v.length < 2) return false;
+    var sub = function (a, b) { return a.every(function (t) { return b.some(function (u) { return parolaSimile(t, u); }); }); };
+    return sub(w, v) || sub(v, w);
+  }
+  function inLista(nome, lista) { return lista.some(function (x) { return stessoNome(nome, x); }); }
+  var $ = function (id) { return document.getElementById(id); };
+
+  // all'apertura: l'ultimo giorno guardato su questo browser, altrimenti oggi
+  function oggi() { var d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+  var giorno = (function () { var g = lsGet("vista:giorno"); return /^\d{4}-\d{2}-\d{2}$/.test(g || "") ? g : oggi(); })();
+  var shifts = [];
+  var editingId = null, hl = null, armed = false;
+  var db = null, canWrite = true, unsub = null;
+  var assenze = [], unsubA = null;
+  var TIPI = { riposo: "Riposo", ferie: "Ferie" };
+
+  function lsGet(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { window.localStorage.setItem(k, v); } catch (e) {} }
+
+  function titolo(g) {
+    var d = new Date(g + "T12:00:00");
+    var w = d.toLocaleDateString("it-IT", { weekday: "long" });
+    return w.charAt(0).toUpperCase() + w.slice(1) + " " + String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0");
+  }
+  function shiftDay(g, delta) {
+    var d = new Date(g + "T12:00:00"); d.setDate(d.getDate() + delta);
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function hue(name) {
+    var h = 0, s = name.toLowerCase();
+    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360;
+    return h;
+  }
+  function fmtMin(mins) {
+    var h = Math.floor(mins / 60), r = mins % 60;
+    return r ? h + " h " + r : h + " h";
+  }
+  function setMsg(t, ok) { var el = $("msg"); el.textContent = t || ""; el.className = "msg" + (ok ? " ok" : ""); }
+
+  /* ---------- struttura statica ---------- */
+  var board = $("board"), boardBox = $("boardBox"), lanes = {}, covCells = [];
+  (function buildBox() {
+    var corner = document.createElement("div"); corner.className = "corner"; corner.textContent = "Box"; boardBox.appendChild(corner);
+    var times = document.createElement("div"); times.className = "times";
+    SLOTS.forEach(function (s) {
+      var t = document.createElement("div"); t.className = "t" + (s.slice(3) === "00" ? " h" : "") + (Number(s.slice(0, 2)) % 2 ? " alt" : "");
+      var sp = document.createElement("span"); sp.textContent = s; t.appendChild(sp); times.appendChild(t);
+    });
+    boardBox.appendChild(times);
+  })();
+  (function build() {
+    var corner = document.createElement("div"); corner.className = "corner"; corner.textContent = "Cassa"; board.appendChild(corner);
+    var times = document.createElement("div"); times.className = "times";
+    SLOTS.forEach(function (s) {
+      var hh = Number(s.slice(0, 2)) + (s.slice(3) === "45" ? 1 : 0);
+      var t = document.createElement("div"); t.className = "t" + (s.slice(3) === "00" ? " h" : "") + (hh % 2 ? " alt" : "");
+      var sp = document.createElement("span"); sp.textContent = s; t.appendChild(sp); times.appendChild(t);
+    });
+    board.appendChild(times);
+    ROWS.forEach(function (name) {
+      var lab = document.createElement("div"); lab.className = "rowlabel g-" + REP[name];
+      var lt = document.createElement("small"); lt.textContent = REP_NOME[REP[name]];
+      var ln = document.createElement("b"); ln.textContent = name;
+      if (BLOCCATE[name]) { var et = document.createElement("small"); et.className = "emerg-tag"; et.textContent = BLOCCATE[name]; lab.appendChild(et); }
+      lab.appendChild(ln); board.appendChild(lab);
+      var lane = document.createElement("div"); lane.className = "lane g-" + REP[name] + (BLOCCATE[name] ? " emerg" : ""); lane.dataset.riga = name;
+      lane.addEventListener("click", onLaneClick);
+      board.appendChild(lane); lanes[name] = lane;
+    });
+    var cl = document.createElement("div"); cl.className = "covlabel"; cl.textContent = "Presenti"; board.appendChild(cl);
+    var cov = document.createElement("div"); cov.className = "cov";
+    SLOTS.forEach(function () { var c = document.createElement("div"); c.className = "c"; cov.appendChild(c); covCells.push(c); });
+    board.appendChild(cov);
+
+    var o0 = document.createElement("option"); o0.value = ""; o0.textContent = "Da assegnare"; $("riga").appendChild(o0);
+    var oA = document.createElement("option"); oA.value = "ACC"; oA.textContent = "Punto accoglienza"; $("riga").appendChild(oA);
+    ROWS.forEach(function (name) { if (BLOCCATE[name]) return; var o = document.createElement("option"); o.value = name; o.textContent = name; $("riga").appendChild(o); });
+    $("riga").value = CASSA_ORDINE[0];
+    ["da", "a"].forEach(function (id) {
+      SLOTS.forEach(function (s) { var o = document.createElement("option"); o.value = s; o.textContent = s; $(id).appendChild(o); });
+    });
+    $("da").value = "08:30"; $("a").value = "13:00";
+  })();
+
+  /* ---------- salvataggio ---------- */
+  function localKey() { return "turni:" + giorno; }
+  function loadLocal() {
+    try { return JSON.parse(lsGet(localKey()) || "[]"); } catch (e) { return []; }
+  }
+  function localLoad(kind, g) { try { return JSON.parse(lsGet(kind + ":" + g) || "[]"); } catch (e) { return []; } }
+  function localSave(kind, g, arr) { lsSet(kind + ":" + g, JSON.stringify(arr)); }
+  function parseAss(docs) {
+    var out = [];
+    docs.forEach(function (d) { var x = d.data() || {}; if (!x.nome || !TIPI[x.tipo]) return; out.push({ id: d.id, nome: String(x.nome), tipo: x.tipo }); });
+    return out;
+  }
+  async function fetchDay(g) {
+    if (db) {
+      var r = await Promise.all([db.collection("turni").where("giorno", "==", g).get(), db.collection("assenze").where("giorno", "==", g).get()]);
+      return { turni: parseDocs(r[0].docs), assenze: parseAss(r[1].docs) };
+    }
+    return { turni: localLoad("turni", g), assenze: localLoad("assenze", g) };
+  }
+  async function addOn(kind, g, rec) {
+    rec = Object.assign({ giorno: g }, rec);
+    if (db) { await db.collection(kind).add(rec); return; }
+    var arr = localLoad(kind, g);
+    arr.push(Object.assign({ id: "l" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6) }, rec));
+    localSave(kind, g, arr);
+    if (g === giorno) { if (kind === "turni") shifts = arr; else assenze = arr; render(); }
+  }
+  async function removeAss(id) {
+    if (db) await db.collection("assenze").doc(id).delete();
+    else { assenze = assenze.filter(function (x) { return x.id !== id; }); localSave("assenze", giorno, assenze); render(); }
+  }
+  function saveLocal() { lsSet(localKey(), JSON.stringify(shifts.map(function (s) { return { id: s.id, giorno: giorno, nome: s.nome, riga: s.riga, da: s.da, a: s.a, dest: s.dest || "" }; }))); }
+
+  function parseDocs(docs) {
+    var out = [];
+    docs.forEach(function (d) {
+      var x = d.data() || {};
+      if (SLOTS.indexOf(x.da) < 0 || SLOTS.indexOf(x.a) < 0 || !x.nome || (x.riga && ROWS.indexOf(x.riga) < 0)) return;
+      out.push({ id: d.id, nome: String(x.nome), riga: x.riga ? String(x.riga) : "", da: x.da, a: x.a, dest: x.dest === "casse" || x.dest === "accoglienza" ? x.dest : "" });
+    });
+    return out;
+  }
+  function subscribe() {
+    if (unsub) { unsub(); unsub = null; }
+    if (unsubA) { unsubA(); unsubA = null; }
+    if (db) {
+      unsubA = db.collection("assenze").where("giorno", "==", giorno).onSnapshot(function (snap) { assenze = parseAss(snap.docs); render(); }, function () {});
+      unsub = db.collection("turni").where("giorno", "==", giorno).onSnapshot(function (snap) {
+        shifts = parseDocs(snap.docs);
+        if (editingId && !shifts.some(function (s) { return s.id === editingId; })) stopEdit();
+        render();
+      }, function () {
+        db = null; $("stato").textContent = "Salvataggio condiviso non disponibile: i turni restano su questo browser";
+        subscribe();
+      });
+    } else {
+      shifts = loadLocal(); assenze = localLoad("assenze", giorno); render();
+    }
+  }
+  async function writeShift(rec, id) {
+    if (db) {
+      var col = db.collection("turni");
+      if (id) await col.doc(id).set(rec); else await col.add(rec);
+    } else {
+      if (id) shifts = shifts.map(function (s) { return s.id === id ? Object.assign({}, rec, { id: id }) : s; });
+      else shifts.push(Object.assign({}, rec, { id: "l" + Date.now().toString(36) }));
+      saveLocal(); render();
+    }
+  }
+  async function removeShift(id) {
+    if (db) await db.collection("turni").doc(id).delete();
+    else { shifts = shifts.filter(function (s) { return s.id !== id; }); saveLocal(); render(); }
+  }
+
+  /* ---------- validazione ---------- */
+  function check(rec, ignoreId, list, ass) {
+    list = list || shifts; ass = ass || assenze;
+    var da = SLOTS.indexOf(rec.da), a = SLOTS.indexOf(rec.a), n = rec.nome.toLowerCase();
+    if (!rec.nome) return "Scrivi il nome.";
+    if (a <= da) return "L'orario di fine deve venire dopo l'inizio.";
+    if (BLOCCATE[rec.riga]) return bloccataMsg(rec.riga);
+    var amm = casseAmmesse(rec.nome);
+    if (rec.riga && amm && amm.indexOf(rec.riga) < 0) return rec.nome + " va sempre tra la " + amm[0] + " e la " + amm[amm.length - 1] + ".";
+    if (rec.riga && !amm && chiude(rec) && CASSE_CHIUSURA.indexOf(rec.riga) < 0) return "Chi chiude a mezzanotte va sempre in CASSA 2 o CASSA 3.";
+    var fo = fuori(rec.nome);
+    if (fo && !(fo === "punto accoglienza" && !rec.riga)) return rec.nome + fuoriFrase(rec.nome) + ": non va nel piano casse.";
+    var off = ass.filter(function (x) { return x.nome.toLowerCase() === n; })[0];
+    if (off) return rec.nome + " è in " + TIPI[off.tipo].toLowerCase() + " questo giorno.";
+    for (var i = 0; i < list.length; i++) {
+      var s = list[i]; if (s.id === ignoreId) continue;
+      var sd = SLOTS.indexOf(s.da), sa = SLOTS.indexOf(s.a);
+      if (!(da < sa && sd < a)) continue;
+      if (rec.riga && s.riga === rec.riga) return rec.riga + " è già occupata da " + s.nome + " (" + s.da + "-" + s.a + ").";
+      if (s.nome.toLowerCase() === n) return rec.nome + " è già in turno" + (s.riga ? " in " + s.riga : "") + " dalle " + s.da + " alle " + s.a + ".";
+    }
+    return "";
+  }
+
+  /* ---------- interazione ---------- */
+  function readForm() {
+    var nome = $("nome").value.trim(), riga = $("riga").value, prev = shifts.filter(function (x) { return x.id === editingId; })[0];
+    var dest = inLista(nome, ACC_CHIEDI) ? (riga ? "casse" : (prev && prev.dest) || "") : "";
+    if (riga === "ACC") { riga = ""; dest = "accoglienza"; }
+    return { giorno: giorno, nome: nome, riga: riga, da: $("da").value, a: $("a").value, dest: dest };
+  }
+  function startEdit(s) {
+    editingId = s.id; armed = false;
+    $("nome").value = s.nome; $("riga").value = collocazione(s) === "punto accoglienza" ? "ACC" : s.riga; $("da").value = s.da; $("a").value = s.a;
+    $("panel").classList.add("editing"); $("ftitle").textContent = "Modifica turno"; $("salva").textContent = "Salva modifiche";
+    $("annulla").hidden = false; $("elimina").hidden = false;
+    $("elimina").textContent = "Elimina"; $("elimina").classList.remove("armed");
+    setMsg(""); render();
+    $("form").scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+  function stopEdit() {
+    editingId = null; armed = false;
+    $("panel").classList.remove("editing"); $("ftitle").textContent = "Nuovo turno"; $("salva").textContent = "Aggiungi turno";
+    $("annulla").hidden = true; $("elimina").hidden = true; $("elimina").classList.remove("armed");
+    $("nome").value = ""; setMsg("");
+  }
+  function onLaneClick(e) {
+    if (e.target.closest(".bar")) return;
+    if (BLOCCATE[e.currentTarget.dataset.riga]) { setMsg(bloccataMsg(e.currentTarget.dataset.riga)); return; }
+    if (e.currentTarget.dataset.riga === "ACC") {
+      var cA = Math.max(0, Math.min(N - 1, Math.floor((e.clientX - e.currentTarget.getBoundingClientRect().left) / W)));
+      if (editingId) stopEdit();
+      $("riga").value = "ACC"; $("da").value = SLOTS[cA]; $("a").value = SLOTS[Math.min(N - 1, cA + 8)];
+      setMsg("Punto accoglienza dalle " + SLOTS[cA] + ". Scrivi il nome e aggiungi.", true);
+      $("nome").focus(); render(); return;
+    }
+    var lane = e.currentTarget, col = Math.max(0, Math.min(N - 1, Math.floor((e.clientX - lane.getBoundingClientRect().left) / W)));
+    if (editingId) stopEdit();
+    $("riga").value = lane.dataset.riga; $("da").value = SLOTS[col];
+    $("a").value = SLOTS[Math.min(N - 1, col + 8)];
+    setMsg(lane.dataset.riga + " dalle " + SLOTS[col] + ". Scrivi il nome e aggiungi.", true);
+    $("nome").focus(); render();
+  }
+  $("form").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    if (!canWrite) { setMsg("Hai accesso in sola lettura."); return; }
+    var rec = readForm(), err = check(rec, editingId);
+    if (err) { setMsg(err); return; }
+    try {
+      await writeShift(rec, editingId);
+      var wasEdit = !!editingId;
+      rememberName(rec.nome);
+      if (wasEdit) stopEdit(); else $("nome").value = "";
+      setMsg(wasEdit ? "Turno aggiornato." : "Turno aggiunto: " + rec.nome + ", " + (rec.riga || (rec.dest === "accoglienza" || fuori(rec.nome) === "punto accoglienza" ? "punto accoglienza" : "da assegnare")) + ", " + rec.da + "-" + rec.a + ".", true);
+      if (!wasEdit) $("nome").focus();
+    } catch (x) {
+      setMsg(x && x.code === "quota_exceeded" ? "Spazio esaurito: elimina qualche turno vecchio." : "Non sono riuscito a salvare. Riprova tra poco.");
+    }
+  });
+  $("annulla").addEventListener("click", function () { stopEdit(); render(); });
+  $("elimina").addEventListener("click", async function () {
+    if (!editingId) return;
+    if (!armed) { armed = true; this.textContent = "Conferma eliminazione"; this.classList.add("armed"); return; }
+    try { var id = editingId; stopEdit(); await removeShift(id); setMsg("Turno eliminato.", true); }
+    catch (x) { setMsg("Non sono riuscito a eliminare. Riprova tra poco."); }
+  });
+  $("prev").addEventListener("click", function () { setDay(shiftDay(giorno, -1)); });
+  $("next").addEventListener("click", function () { setDay(shiftDay(giorno, 1)); });
+  $("giorno").addEventListener("change", function () { if (this.value) setDay(this.value); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && editingId) { stopEdit(); render(); } });
+  function setDay(g) { giorno = g; lsSet("vista:giorno", g); hl = null; if (editingId) stopEdit(); $("giorno").value = g; subscribe(); }
+
+  $("autoBtn").addEventListener("click", async function () {
+    if (!canWrite) { setMsg("Hai accesso in sola lettura."); return; }
+    var res = autoAssign(shifts), ids = Object.keys(res), btn = this;
+    var acc = shifts.filter(function (s) { return !s.riga && collocazione(s); }).map(function (s) { return s.nome; });
+    if (!ids.length) { setMsg(acc.length ? acc.join(", ") + (acc.length === 1 ? " sta" : " stanno") + " fuori dal piano casse: elimina il turno." : "Non ci sono turni da assegnare."); return; }
+    btn.disabled = true; var done = 0;
+    try {
+      for (var i = 0; i < ids.length; i++) {
+        var s0 = shifts.filter(function (x) { return x.id === ids[i]; })[0];
+        if (!s0) continue;
+        await writeShift({ giorno: giorno, nome: s0.nome, riga: res[ids[i]], da: s0.da, a: s0.a, dest: s0.dest || "" }, ids[i]); done++;
+      }
+      setMsg("Assegnati " + done + (done === 1 ? " turno" : " turni") + " alle casse." + (acc.length ? " " + acc.join(", ") + " restano fuori dal piano casse." : ""), true);
+    } catch (x) { setMsg("Assegnati " + done + " turni, poi il salvataggio si è interrotto. Riprova."); }
+    finally { btn.disabled = false; }
+  });
+
+  $("assForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    var nome = $("assNome").value.trim(), tipo = $("assTipo").value, msg = $("assMsg");
+    msg.className = "msg";
+    if (!canWrite) { msg.textContent = "Hai accesso in sola lettura."; return; }
+    if (!nome) { msg.textContent = "Scrivi il nome."; return; }
+    var n = nome.toLowerCase();
+    if (assenze.some(function (x) { return x.nome.toLowerCase() === n; })) { msg.textContent = nome + " è già segnato in riposi o ferie oggi."; return; }
+    if (shifts.some(function (x) { return x.nome.toLowerCase() === n; })) { msg.textContent = nome + " ha un turno oggi: eliminalo prima di segnarlo in " + TIPI[tipo].toLowerCase() + "."; return; }
+    try { await addOn("assenze", giorno, { nome: nome, tipo: tipo }); rememberName(nome); $("assNome").value = ""; msg.className = "msg ok"; msg.textContent = nome + " segnato in " + TIPI[tipo].toLowerCase() + "."; }
+    catch (x) { msg.textContent = "Non sono riuscito a salvare. Riprova tra poco."; }
+  });
+
+  function rememberName(n) {
+    var list = knownNames();
+    if (!list.some(function (x) { return x.toLowerCase() === n.toLowerCase(); })) { list.push(n); lsSet("turni:nomi", JSON.stringify(list)); }
+  }
+  function knownNames() { try { return JSON.parse(lsGet("turni:nomi") || "[]"); } catch (e) { return []; } }
+
+  /* ---------- render ---------- */
+  function render() {
+    $("titolo").textContent = titolo(giorno);
+    document.title = "Foglio Casse";
+    ROWS.forEach(function (n) { var l = lanes[n]; while (l.firstChild) l.removeChild(l.firstChild); });
+    var counts = new Array(N).fill(0), people = {}, totalMin = 0, todo = [], accList = [], decList = [];
+
+    shifts.slice().sort(function (a, b) { return SLOTS.indexOf(a.da) - SLOTS.indexOf(b.da); }).forEach(function (s) {
+      var col = collocazione(s);
+      if (col === "da decidere") { decList.push(s); return; }
+      if (col === "punto accoglienza") return;
+      if (col) { accList.push(s); return; }
+      var da = SLOTS.indexOf(s.da), a = SLOTS.indexOf(s.a), lane = lanes[s.riga];
+      if (!lane) todo.push(s);
+      else {
+      var b = document.createElement("button"); b.type = "button";
+      b.className = "bar person g-" + REP[s.riga] + (s.id === editingId ? " sel" : "") + (hl && hl !== s.nome.toLowerCase() ? " dim" : "");
+      b.style.left = (da * W + 1) + "px"; b.style.width = ((a - da) * W - 2) + "px";
+      b.style.setProperty("--h", hue(s.nome)); b.title = s.nome + ", " + s.riga + ", " + s.da + "-" + s.a;
+      var nm = document.createElement("b"); nm.textContent = s.nome;
+      var tm = document.createElement("small"); tm.textContent = s.da + " - " + s.a;
+      b.appendChild(nm); b.appendChild(tm);
+      b.addEventListener("click", function () { startEdit(s); });
+      lane.appendChild(b);
+      }
+      for (var i = da; i < a; i++) counts[i]++;
+      var mins = (a - da) * 15; totalMin += mins;
+      var k = s.nome.toLowerCase();
+      if (!people[k]) people[k] = { nome: s.nome, mins: 0 };
+      people[k].mins += mins;
+    });
+
+    var max = Math.max.apply(null, counts.concat([1])), peak = 0;
+    counts.forEach(function (c, i) {
+      var el = covCells[i]; el.textContent = c || "·"; el.classList.toggle("zero", !c);
+      var pct = Math.round(c / max * 85); el.style.setProperty("--p", pct); el.classList.toggle("hi", pct > 45);
+      if (c > counts[peak]) peak = i;
+    });
+
+    var keys = Object.keys(people).sort();
+    var covered = ROWS.filter(function (n) { return shifts.some(function (x) { return x.riga === n; }); }).length;
+    $("stats").innerHTML = "";
+    [["viola", keys.length, keys.length === 1 ? "persona in turno" : "persone in turno"],
+     ["gastro", fmtMin(totalMin), "ore pianificate"],
+     ["pane", counts[peak] || 0, counts[peak] ? "presenti al picco, dalle " + SLOTS[peak] : "presenti al picco"],
+     ["cucina", covered + "/" + ROWS.length, "casse aperte"]].forEach(function (p) {
+      var d = document.createElement("div"); d.className = "tile g-" + p[0];
+      var b = document.createElement("b"); b.textContent = p[1];
+      var sp = document.createElement("span"); sp.textContent = p[2];
+      d.appendChild(b); d.appendChild(sp); $("stats").appendChild(d);
+    });
+
+    var chips = $("chips"); chips.innerHTML = "";
+    if (!keys.length) {
+      var em = document.createElement("div"); em.className = "empty";
+      em.textContent = "Nessun turno inserito per questo giorno. Compila il modulo o clicca una cella del foglio.";
+      chips.appendChild(em);
+    }
+    keys.forEach(function (k) {
+      var c = document.createElement("button"); c.type = "button"; c.className = "chip";
+      c.style.setProperty("--h", hue(people[k].nome)); c.setAttribute("aria-pressed", hl === k ? "true" : "false");
+      var av = document.createElement("span"); av.className = "av"; av.textContent = people[k].nome.charAt(0).toUpperCase(); c.appendChild(av);
+      c.appendChild(document.createTextNode(people[k].nome));
+      var sp = document.createElement("em"); sp.textContent = fmtMin(people[k].mins); c.appendChild(sp);
+      c.addEventListener("click", function () { hl = hl === k ? null : k; render(); });
+      chips.appendChild(c);
+    });
+
+    var accS = accoShifts(shifts), accC = accCounts(accS);
+    renderAcc(accS, accC);
+    planStatus(counts, todo, decList.length, accGaps(accC), accS.length);
+    renderDecide(decList);
+    $("accSec").hidden = !accList.length;
+    var al = $("accList"); al.innerHTML = "";
+    accList.forEach(function (s) {
+      var b = document.createElement("button"); b.type = "button"; b.className = "todo-card";
+      var nm = document.createElement("b"); nm.textContent = s.nome;
+      var tm = document.createElement("small"); tm.textContent = s.da + " - " + s.a + " \u00b7 " + collocazione(s);
+      b.appendChild(nm); b.appendChild(tm);
+      b.addEventListener("click", function () { startEdit(s); });
+      al.appendChild(b);
+    });
+    $("todo").hidden = !todo.length;
+    $("todoCount").textContent = todo.length === 1 ? "1 turno senza cassa: cliccalo per sceglierla" : todo.length + " turni senza cassa: cliccali per sceglierla";
+    var tl = $("todoList"); tl.innerHTML = "";
+    todo.forEach(function (s) {
+      var b = document.createElement("button"); b.type = "button"; b.className = "todo-card" + (s.id === editingId ? " sel" : "");
+      var nm = document.createElement("b"); nm.textContent = s.nome;
+      var tm = document.createElement("small"); tm.textContent = s.da + " - " + s.a;
+      b.appendChild(nm); b.appendChild(tm);
+      b.addEventListener("click", function () { startEdit(s); $("riga").focus(); });
+      tl.appendChild(b);
+    });
+
+    ["riposo", "ferie"].forEach(function (t) {
+      var ul = $("ass-" + t); ul.innerHTML = "";
+      var list = assenze.filter(function (x) { return x.tipo === t; }).sort(function (a, b) { return a.nome.localeCompare(b.nome); });
+      $("cnt-" + t).textContent = list.length;
+      if (!list.length) { var li0 = document.createElement("li"); li0.className = "empty"; li0.textContent = "Nessuno"; ul.appendChild(li0); }
+      list.forEach(function (x) {
+        var li = document.createElement("li"); var sp = document.createElement("span"); sp.textContent = x.nome;
+        var del = document.createElement("button"); del.type = "button"; del.className = "x"; del.textContent = "\u00d7"; del.setAttribute("aria-label", "Togli " + x.nome);
+        del.addEventListener("click", async function () { try { await removeAss(x.id); } catch (e) { $("assMsg").textContent = "Non sono riuscito a togliere " + x.nome + ". Riprova."; } });
+        li.appendChild(sp); li.appendChild(del); ul.appendChild(li);
+      });
+    });
+
+    var dl = $("nomi"); dl.innerHTML = "";
+    var all = STAFF.slice(); knownNames().forEach(function (n) { if (!all.some(function (x) { return x.toLowerCase() === n.toLowerCase(); })) all.push(n); }); keys.forEach(function (k) { if (!all.some(function (x) { return x.toLowerCase() === k; })) all.push(people[k].nome); });
+    all.sort().forEach(function (n) { var o = document.createElement("option"); o.value = n; dl.appendChild(o); });
+  }
+
+  /* ---------- assegnazione automatica casse ---------- */
+  // list: turni del giorno ({id, nome, riga, da, a}); assegna una cassa a quelli con riga vuota.
+  function autoAssign(list) {
+    var busy = {}, out = {};
+    list.forEach(function (s) { if (s.riga) (busy[s.riga] = busy[s.riga] || []).push([SLOTS.indexOf(s.da), SLOTS.indexOf(s.a)]); });
+    // ordine: prima chi chiude a mezzanotte (cassa 2), poi chi ha casse fisse, poi tutti gli altri per orario d'inizio
+    var fase = function (s) { return casseAmmesse(s.nome) ? 1 : chiude(s) ? 0 : 2; };
+    var todo = list.filter(function (s) { return !s.riga && !collocazione(s); }).sort(function (x, y) {
+      return fase(x) - fase(y) || SLOTS.indexOf(x.da) - SLOTS.indexOf(y.da) || SLOTS.indexOf(y.a) - SLOTS.indexOf(x.a);
+    });
+    todo.forEach(function (s) {
+      var da = SLOTS.indexOf(s.da), a = SLOTS.indexOf(s.a), amm = casseAmmesse(s.nome);
+      var libera = function (r) {
+        if (BLOCCATE[r] || (amm && amm.indexOf(r) < 0)) return false;
+        return !(busy[r] || []).some(function (iv) { return da < iv[1] && iv[0] < a; });
+      };
+      if (!amm && chiude(s)) {
+        // chi chiude a mezzanotte: solo cassa 2 o 3; se sono occupate resta da assegnare
+        var cc = CASSE_CHIUSURA.filter(libera)[0];
+        if (cc) { out[s.id] = cc; (busy[cc] = busy[cc] || []).push([da, a]); }
+        return;
+      }
+      var fineVicina = function (r) { var m = -1; (busy[r] || []).forEach(function (iv) { if (iv[1] <= da && iv[1] > m) m = iv[1]; }); return m; };
+      // 1. riusa una cassa già aperta e libera: quella liberata più di recente (cambio turno sulla stessa cassa)
+      var aperte = CASSA_ORDINE.filter(function (r) { return busy[r] && busy[r].length && libera(r); });
+      var pick = aperte.sort(function (x, y) { return fineVicina(y) - fineVicina(x) || CASSA_ORDINE.indexOf(x) - CASSA_ORDINE.indexOf(y); })[0];
+      // 2. altrimenti apri la prossima nell'ordine (2, 3, 4, 6, 7, 8, 9, 10)
+      if (!pick) pick = CASSA_ORDINE.filter(libera)[0];
+      if (!pick) return;
+      out[s.id] = pick;
+      (busy[pick] = busy[pick] || []).push([da, a]);
+    });
+    return out;
+  }
+
+  /* ---------- rigenera con i criteri ---------- */
+  async function setOn(g, id, rec) {
+    if (db) { await db.collection("turni").doc(id).set(rec); return; }
+    var arr = localLoad("turni", g).map(function (x) { return x.id === id ? Object.assign({ id: id }, rec) : x; });
+    localSave("turni", g, arr);
+    if (g === giorno) { shifts = arr; render(); }
+  }
+  async function rigenera(days) {
+    var changed = 0, tot = 0;
+    for (var k = 0; k < days.length; k++) {
+      var g = days[k], d = await fetchDay(g);
+      var list = d.turni.filter(function (x) { return !collocazione(x); }).map(function (x) { return { id: x.id, nome: x.nome, riga: "", da: x.da, a: x.a, dest: x.dest }; });
+      tot += list.length;
+      var res = autoAssign(list);
+      for (var i = 0; i < d.turni.length; i++) {
+        var x = d.turni[i], nr = res[x.id];
+        if (collocazione(x) && x.riga) { await setOn(g, x.id, { giorno: g, nome: x.nome, riga: "", da: x.da, a: x.a, dest: x.dest || "" }); changed++; continue; }
+        if (nr && nr !== x.riga) { await setOn(g, x.id, { giorno: g, nome: x.nome, riga: nr, da: x.da, a: x.a, dest: x.dest || "" }); changed++; }
+        else if (!nr && x.riga && !collocazione(x)) { await setOn(g, x.id, { giorno: g, nome: x.nome, riga: "", da: x.da, a: x.a, dest: x.dest || "" }); changed++; }
+      }
+    }
+    return { changed: changed, tot: tot };
+  }
+  var regenArmed = null;
+  function regenReset() {
+    regenArmed = null;
+    $("regenG").textContent = "Rigenera giorno"; $("regenS").textContent = "Rigenera settimana";
+    $("regenG").classList.remove("confirm"); $("regenS").classList.remove("confirm"); $("regenNo").hidden = true;
+  }
+  async function onRegen(kind) {
+    if (!canWrite) { setMsg("Hai accesso in sola lettura."); return; }
+    var lun = mondayOf(giorno);
+    var days = kind === "G" ? [giorno] : DOW.map(function (d, i) { return shiftDay(lun, i); });
+    if (regenArmed !== kind) {
+      regenReset(); regenArmed = kind;
+      var b = $("regen" + kind); b.classList.add("confirm");
+      b.textContent = kind === "G" ? "Conferma: riassegna le casse di " + titolo(giorno) : "Conferma: riassegna le casse dal " + titolo(lun).split(" ")[1] + " al " + titolo(days[6]).split(" ")[1];
+      $("regenNo").hidden = false;
+      return;
+    }
+    regenReset();
+    $("regenG").disabled = $("regenS").disabled = true;
+    setMsg("Rigenero il piano con i criteri attuali...", true);
+    try {
+      var r = await rigenera(days);
+      setMsg(r.tot ? "Piano rigenerato: " + r.changed + (r.changed === 1 ? " turno spostato" : " turni spostati") + " su " + r.tot + "." : "Non ci sono turni da rigenerare.", true);
+    } catch (e) { setMsg("La rigenerazione si è interrotta. I turni già spostati restano: riprova."); }
+    finally { $("regenG").disabled = $("regenS").disabled = false; }
+  }
+  $("regenG").addEventListener("click", function () { onRegen("G"); });
+  $("regenS").addEventListener("click", function () { onRegen("S"); });
+  $("regenNo").addEventListener("click", regenReset);
+
+  /* ---------- casse o accoglienza ---------- */
+  var decAskedDay = null, decOpen = false;
+  function decRow(s) {
+    var row = document.createElement("div"); row.className = "dec-row";
+    var info = document.createElement("div"); var nm = document.createElement("b"); nm.textContent = s.nome;
+    var tm = document.createElement("small"); tm.textContent = titolo(giorno) + ", " + s.da + " - " + s.a;
+    info.appendChild(nm); info.appendChild(tm);
+    // il box è scoperto durante questo turno? allora consiglia il punto accoglienza
+    var bc = accCounts(accoShifts(shifts)), i0 = Math.max(SLOTS.indexOf(s.da), SLOTS.indexOf(ACC_DA)), i1 = Math.min(SLOTS.indexOf(s.a), SLOTS.indexOf(ACC_A));
+    var g0 = -1, g1 = -1;
+    for (var i = i0; i < i1; i++) if (!bc[i]) { if (g0 < 0) g0 = i; g1 = i + 1; }
+    var consigliaBox = g0 >= 0;
+    if (consigliaBox) { var hint = document.createElement("small"); hint.className = "dec-hint"; hint.textContent = "Il box è scoperto dalle " + SLOTS[g0] + " alle " + SLOTS[g1] + ": consigliato Punto accoglienza"; info.appendChild(hint); }
+    row.appendChild(info);
+    var act = document.createElement("div"); act.className = "actions";
+    [["casse", "Turno casse", consigliaBox ? "btn" : "btn primary"], ["accoglienza", consigliaBox ? "Punto accoglienza (consigliato)" : "Punto accoglienza", consigliaBox ? "btn primary" : "btn"]].forEach(function (o) {
+      var b = document.createElement("button"); b.type = "button"; b.className = o[2]; b.textContent = o[1];
+      b.addEventListener("click", function () { decide(s, o[0], b); });
+      act.appendChild(b);
+    });
+    row.appendChild(act);
+    return row;
+  }
+  function renderDecide(list) {
+    $("decSec").hidden = !list.length;
+    var a = $("decList"), m = $("decModalList"); a.innerHTML = ""; m.innerHTML = "";
+    list.forEach(function (s) { a.appendChild(decRow(s)); m.appendChild(decRow(s)); });
+    $("decSub").textContent = list.length === 1 ? "Questo turno non ha ancora una collocazione. Sceglila prima di completare il piano." : "Questi " + list.length + " turni non hanno ancora una collocazione. Sceglila prima di completare il piano.";
+    if (!list.length) { if (decOpen) closeDecide(); return; }
+    if (decAskedDay !== giorno && canWrite) { decAskedDay = giorno; decOpen = true; $("decModal").hidden = false; }
+  }
+  function closeDecide() { decOpen = false; $("decModal").hidden = true; }
+  $("decLater").addEventListener("click", closeDecide);
+  $("decModal").addEventListener("click", function (e) { if (e.target === this) closeDecide(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && decOpen) closeDecide(); });
+  async function decide(s, dest, btn) {
+    if (!canWrite) { setMsg("Hai accesso in sola lettura."); return; }
+    btn.disabled = true;
+    try {
+      await writeShift({ giorno: giorno, nome: s.nome, riga: "", da: s.da, a: s.a, dest: dest }, s.id);
+      if (dest === "casse") await rigenera([giorno]);
+      setMsg(s.nome + (dest === "casse" ? " in turno casse: giornata ricalcolata con i criteri" : " al punto accoglienza") + " (" + s.da + "-" + s.a + ").", true);
+    } catch (e) { btn.disabled = false; setMsg("Non sono riuscito a salvare la scelta. Riprova."); }
+  }
+
+  (function () {
+    var el = $("assLong"); el.innerHTML = "";
+    var b = document.createElement("b"); b.textContent = "Assenze lunghe: "; el.appendChild(b);
+    el.appendChild(document.createTextNode(LUNGHE.map(function (x) { return x[0] + " (" + x[1] + ")"; }).join(", ") + ". Restano fuori dal piano finché non rientrano."));
+  })();
+
+  /* ---------- sezione accoglienza sul foglio ---------- */
+  function renderAcc(list, c) {
+    Array.prototype.slice.call(boardBox.querySelectorAll(".accrow")).forEach(function (el) { el.remove(); });
+    var tracks = accTracks(list), nT = Math.max(1, tracks.length);
+    var lab = document.createElement("div"); lab.className = "rowlabel g-acc accrow";
+    var ln = document.createElement("b"); ln.textContent = "BOX"; lab.appendChild(ln);
+    boardBox.appendChild(lab);
+    var lane = document.createElement("div"); lane.className = "lane g-acc accrow"; lane.dataset.riga = "ACC";
+    lane.addEventListener("click", onLaneClick);
+    // un solo box: se due turni si sovrappongono (cambio turno) le barre dividono la riga in altezza
+    var hBar = (50 - 12) / nT;
+    tracks.forEach(function (tr, t) {
+      tr.forEach(function (s) {
+        var da = SLOTS.indexOf(s.da), a = SLOTS.indexOf(s.a);
+        var b = document.createElement("button"); b.type = "button";
+        b.className = "bar person g-acc" + (nT > 1 ? " mini" : "") + (s.id === editingId ? " sel" : "") + (hl && hl !== s.nome.toLowerCase() ? " dim" : "");
+        b.style.left = (da * W + 1) + "px"; b.style.width = ((a - da) * W - 2) + "px";
+        b.style.top = (6 + t * hBar) + "px"; b.style.bottom = "auto"; b.style.height = (hBar - 2) + "px";
+        b.style.setProperty("--h", hue(s.nome)); b.title = s.nome + ", box, " + s.da + "-" + s.a;
+        var nm = document.createElement("b"); nm.textContent = s.nome;
+        var tm = document.createElement("small"); tm.textContent = s.da + " - " + s.a;
+        b.appendChild(nm); b.appendChild(tm);
+        b.addEventListener("click", function () { startEdit(s); });
+        lane.appendChild(b);
+      });
+    });
+    boardBox.appendChild(lane);
+    var cl = document.createElement("div"); cl.className = "covlabel accrow"; cl.textContent = "Copertura"; boardBox.appendChild(cl);
+    var cov = document.createElement("div"); cov.className = "cov accrow";
+    var i0 = SLOTS.indexOf(ACC_DA), i1 = SLOTS.indexOf(ACC_A);
+    SLOTS.forEach(function (x, i) {
+      var cell = document.createElement("div"); var dentro = i >= i0 && i < i1;
+      cell.className = "c " + (dentro ? (c[i] ? "accok" : "accgap") : "zero");
+      cell.textContent = dentro ? (c[i] ? String(c[i]) : "!") : (c[i] ? String(c[i]) : "\u00b7");
+      if (dentro && !c[i]) cell.title = "Accoglienza scoperta alle " + x;
+      cov.appendChild(cell);
+    });
+    boardBox.appendChild(cov);
+  }
+
+  (function () {
+    var sc = Array.prototype.slice.call(document.querySelectorAll(".scroller")), lock = false;
+    sc.forEach(function (el) {
+      el.addEventListener("scroll", function () {
+        if (lock) return; lock = true;
+        sc.forEach(function (o) { if (o !== el) o.scrollLeft = el.scrollLeft; });
+        requestAnimationFrame(function () { lock = false; });
+      });
+    });
+  })();
+
+  /* ---------- stato del piano ---------- */
+  function planInfo(counts, todo, dec, accItems) {
+    var first = -1, last = -1, gaps = [];
+    counts.forEach(function (c, i) { if (c) { if (first < 0) first = i; last = i; } });
+    if (first < 0) return { empty: true };
+    for (var i = first; i <= last; i++) {
+      if (counts[i]) continue;
+      var j = i; while (j + 1 <= last && !counts[j + 1]) j++;
+      gaps.push("Scoperto tra le " + SLOTS[i] + " e le " + SLOTS[j + 1]);
+      i = j;
+    }
+    var items = [];
+    if (dec) items.push(dec === 1 ? "1 turno da decidere: casse o accoglienza" : dec + " turni da decidere: casse o accoglienza");
+    if (todo.length) items.push(todo.length === 1 ? "1 turno da assegnare" : todo.length + " turni da assegnare");
+    items = items.concat(gaps).concat(accItems || []);
+    return { empty: false, ok: !items.length, items: items, from: SLOTS[first], to: SLOTS[last + 1] };
+  }
+  function planStatus(counts, todo, dec, accItems, nAcc) {
+    var el = $("plan"), info = planInfo(counts, todo, dec, accItems);
+    $("app").classList.toggle("done", !info.empty && info.ok);
+    el.hidden = info.empty;
+    if (info.empty) return;
+    el.className = "plan " + (info.ok ? "ok" : "warn");
+    el.innerHTML = "";
+    var b = document.createElement("div"); b.className = "plan-badge"; b.textContent = info.ok ? "Piano completo" : "Piano da completare"; el.appendChild(b);
+    var it = document.createElement("div"); it.className = "plan-items";
+    (info.ok ? ["Casse coperte senza buchi dalle " + info.from + " alle " + info.to, "Accoglienza coperta dalle " + ACC_DA + " alle " + ACC_A] : info.items).forEach(function (t) {
+      var sp = document.createElement("span"); sp.textContent = t; it.appendChild(sp);
+    });
+    el.appendChild(it);
+  }
+
+  /* ---------- presentazione ---------- */
+  function setPresent(on) {
+    $("app").classList.toggle("present", on);
+    $("present").textContent = on ? "Esci dalla presentazione" : "Presenta";
+    try {
+      if (on && document.documentElement.requestFullscreen && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(function () {});
+      if (!on && document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function () {});
+    } catch (e) {}
+  }
+  $("present").addEventListener("click", function () { setPresent(!$("app").classList.contains("present")); });
+  document.addEventListener("fullscreenchange", function () { if (!document.fullscreenElement && $("app").classList.contains("present")) setPresent(false); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && $("app").classList.contains("present")) setPresent(false); });
+
+  /* ---------- PDF ---------- */
+  var PDFC = { cassa: ["#5b3fd0", "#ebe6fd"] };
+  function hslRgb(h, sat, l) {
+    sat /= 100; l /= 100;
+    var k = function (n) { return (n + h / 30) % 12; }, a = sat * Math.min(l, 1 - l);
+    var f = function (n) { return Math.round(255 * (l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1))))); };
+    return [f(0), f(8), f(4)];
+  }
+  function fit(doc, text, maxW) {
+    if (doc.getTextWidth(text) <= maxW) return text;
+    while (text.length > 1 && doc.getTextWidth(text + ".") > maxW) text = text.slice(0, -1);
+    return text.length > 1 ? text + "." : "";
+  }
+  function tuttiTurni() { return shifts; }
+  function pianoShifts() { return shifts.filter(function (s) { return !collocazione(s); }); }
+  function buildPdf() {
+    var shifts = pianoShifts();
+    var doc = new window.jspdf.jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    var X = 10, LW = 30, TOP = 30, HH = 13, RH = 10, CW = (297 - 2 * X - LW) / N;
+    var accS = accoShifts(tuttiTurni()), accC = accCounts(accS), accTr = accTracks(accS), nT = Math.max(1, accTr.length);
+    var gx = X + LW, gy = TOP + HH;
+    doc.setFont("helvetica", "bold"); doc.setFontSize(20); doc.setTextColor("#33237f");
+    doc.text("Casse " + titolo(giorno), X, 17);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor("#64627e");
+    var tot = 0, names = {};
+    shifts.forEach(function (s) { tot += (SLOTS.indexOf(s.a) - SLOTS.indexOf(s.da)) * 15; names[s.nome.toLowerCase()] = 1; });
+    doc.text(Object.keys(names).length + " persone in turno  |  " + fmtMin(tot) + " pianificate  |  orario 07:00 - 00:00", X, 23);
+
+    var pc = new Array(N).fill(0);
+    shifts.forEach(function (s) { for (var i = SLOTS.indexOf(s.da); i < SLOTS.indexOf(s.a); i++) pc[i]++; });
+    var pinfo = planInfo(pc, shifts.filter(function (s) { return !s.riga; }), 0, accGaps(accC));
+    if (!pinfo.empty) {
+      var tag = pinfo.ok ? "PIANO COMPLETO" : "PIANO DA COMPLETARE";
+      doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+      var tw = doc.getTextWidth(tag) + 10;
+      doc.setFillColor(pinfo.ok ? "#12805c" : "#9a5800"); doc.roundedRect(287 - tw, 10, tw, 9, 2, 2, "F");
+      doc.setTextColor("#ffffff"); doc.text(tag, 287 - tw / 2, 16, { align: "center" });
+    }
+
+    // intestazione orari
+    doc.setFillColor("#f1f2f8"); doc.rect(gx, TOP, N * CW, HH, "F");
+    doc.setFontSize(6.2);
+    SLOTS.forEach(function (s, i) {
+      var hr = s.slice(3) === "00";
+      doc.setFont("helvetica", hr ? "bold" : "normal"); doc.setTextColor(hr ? "#5b3fd0" : "#64627e");
+      doc.text(s, gx + i * CW + CW / 2 + 1, gy - 1.2, { angle: 90 });
+    });
+    doc.setFont("helvetica", "bold"); doc.setFontSize(7); doc.setTextColor("#64627e");
+    doc.text("CASSA", X + 2, gy - 2);
+
+    // righe
+    ROWS.forEach(function (name, r) {
+      var y = gy + r * RH, col = PDFC[REP[name]];
+      doc.setFillColor(col[1]); doc.rect(X, y, LW, RH, "F");
+      doc.setFillColor(col[0]); doc.rect(X, y, 1.6, RH, "F");
+      doc.setFont("helvetica", "bold"); doc.setFontSize(9.5); doc.setTextColor("#1c1a2e");
+      doc.text(name, X + 4, y + RH / 2 + 1.3);
+    });
+
+    // griglia
+    for (var i = 0; i <= N; i++) {
+      var hr = i < N ? SLOTS[i].slice(3) === "00" : false;
+      doc.setDrawColor(hr ? "#bdbbd3" : "#e1e0ec"); doc.setLineWidth(hr ? 0.3 : 0.12);
+      doc.line(gx + i * CW, TOP, gx + i * CW, gy + ROWS.length * RH + 8);
+    }
+    doc.setDrawColor("#bdbbd3"); doc.setLineWidth(0.2);
+    for (var r = 0; r <= ROWS.length; r++) doc.line(X, gy + r * RH, gx + N * CW, gy + r * RH);
+    doc.line(X, TOP, gx + N * CW, TOP);
+    doc.rect(X, TOP, LW + N * CW, HH + ROWS.length * RH + 8, "S");
+
+    // turni
+    shifts.forEach(function (s) {
+      var r = ROWS.indexOf(s.riga), da = SLOTS.indexOf(s.da), a = SLOTS.indexOf(s.a);
+      if (r < 0) return;
+      var x = gx + da * CW + 0.4, w = (a - da) * CW - 0.8, y = gy + r * RH + 1.1;
+      var rgb = hslRgb(hue(s.nome), 52, 42);
+      doc.setFillColor(rgb[0], rgb[1], rgb[2]); doc.roundedRect(x, y, w, RH - 2.2, 1.2, 1.2, "F");
+      doc.setTextColor("#ffffff");
+      doc.setFont("helvetica", "bold"); doc.setFontSize(7.2);
+      doc.text(fit(doc, s.nome, w - 3), x + 1.6, y + 3.5);
+      doc.setFont("helvetica", "normal"); doc.setFontSize(6);
+      doc.text(fit(doc, s.da + " - " + s.a, w - 3), x + 1.6, y + 6.6);
+    });
+
+    // presenti
+    var py = gy + ROWS.length * RH, counts = new Array(N).fill(0);
+    shifts.forEach(function (s) { for (var i = SLOTS.indexOf(s.da); i < SLOTS.indexOf(s.a); i++) counts[i]++; });
+    doc.setFont("helvetica", "bold"); doc.setFontSize(7); doc.setTextColor("#64627e");
+    doc.text("PRESENTI", X + 3.5, py + 5.3);
+    doc.setFontSize(6.8); doc.setTextColor("#1c1a2e");
+    counts.forEach(function (c, i) { if (c) doc.text(String(c), gx + i * CW + CW / 2, py + 5.3, { align: "center" }); });
+
+    // punto accoglienza
+    var AH = 10, ay = py + 8;
+    doc.setFillColor("#d6f4e6"); doc.rect(X, ay, LW, AH + 6, "F");
+    doc.setFillColor("#12805c"); doc.rect(X, ay, 1.6, AH + 6, "F");
+    doc.setFont("helvetica", "bold"); doc.setFontSize(7.5); doc.setTextColor("#12805c");
+    doc.text("ACCOGLIENZA", X + 4, ay + 4.6);
+    doc.setFontSize(6); doc.setTextColor("#1c1a2e"); doc.text("box 07-21", X + 4, ay + 8);
+    for (var vi = 0; vi <= N; vi++) {
+      var hr2 = vi < N ? SLOTS[vi].slice(3) === "00" : false;
+      doc.setDrawColor(hr2 ? "#bdbbd3" : "#e1e0ec"); doc.setLineWidth(hr2 ? 0.3 : 0.12);
+      doc.line(gx + vi * CW, ay, gx + vi * CW, ay + AH + 6);
+    }
+    doc.setDrawColor("#bdbbd3"); doc.setLineWidth(0.2);
+    doc.line(gx, ay, gx + N * CW, ay); doc.line(gx, ay + AH, gx + N * CW, ay + AH);
+    doc.rect(X, ay, LW + N * CW, AH + 6, "S");
+    accTr.forEach(function (tr, ti) {
+      tr.forEach(function (s) {
+        var da = SLOTS.indexOf(s.da), a = SLOTS.indexOf(s.a);
+        var sub = (AH - 2) / nT, x = gx + da * CW + 0.4, w = (a - da) * CW - 0.8, y = ay + 1 + ti * sub;
+        var rgb = hslRgb(hue(s.nome), 52, 42);
+        doc.setFillColor(rgb[0], rgb[1], rgb[2]); doc.roundedRect(x, y, w, sub - 0.3, 0.8, 0.8, "F");
+        doc.setTextColor("#ffffff"); doc.setFont("helvetica", "bold"); doc.setFontSize(nT > 1 ? 5.4 : 6.6);
+        doc.text(fit(doc, s.nome + "  " + s.da + "-" + s.a, w - 3), x + 1.4, y + sub / 2 + (nT > 1 ? 0.9 : 1.2));
+      });
+    });
+    var cy = ay + AH, i0 = SLOTS.indexOf(ACC_DA), i1 = SLOTS.indexOf(ACC_A);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(6.2);
+    for (var ci = i0; ci < i1; ci++) {
+      if (!accC[ci]) { doc.setFillColor("#fadcdd"); doc.rect(gx + ci * CW + 0.15, cy + 0.4, CW - 0.3, 5.2, "F"); doc.setTextColor("#b3261e"); doc.text("!", gx + ci * CW + CW / 2, cy + 4.2, { align: "center" }); }
+      else { doc.setTextColor("#12805c"); doc.text(String(accC[ci]), gx + ci * CW + CW / 2, cy + 4.2, { align: "center" }); }
+    }
+
+    // legenda
+    var ly = ay + AH + 6 + 6, lx = X;
+    doc.setFont("helvetica", "normal"); doc.setFontSize(8);
+    doc.setTextColor("#64627e"); doc.text("Ogni colore indica una persona.", lx, ly);
+    doc.setTextColor("#64627e"); doc.setFontSize(7.5);
+    doc.text("Firma responsabile: ______________________", 287, ly, { align: "right" });
+
+    // da assegnare, riposi, ferie
+    var lines = [];
+    var tod = shifts.filter(function (s) { return !s.riga; });
+    if (tod.length) lines.push(["DA ASSEGNARE", tod.map(function (s) { return s.nome + " " + s.da + "-" + s.a; }).join(",  ")]);
+    ["riposo", "ferie"].forEach(function (t) {
+      var l = assenze.filter(function (x) { return x.tipo === t; }).map(function (x) { return x.nome; }).sort();
+      lines.push([t === "riposo" ? "RIPOSI" : "FERIE", l.length ? l.join(",  ") : "nessuno"]);
+    });
+    lines.push(["ASSENZE LUNGHE", LUNGHE.map(function (x) { return x[0] + " (" + x[1] + ")"; }).join(",  ")]);
+    var yy = ly + 6;
+    lines.forEach(function (ln) {
+      if (yy > 205) return;
+      doc.setFont("helvetica", "bold"); doc.setFontSize(7.5); doc.setTextColor("#33237f"); doc.text(ln[0], X, yy);
+      doc.setFont("helvetica", "normal"); doc.setTextColor("#1c1a2e");
+      var t = doc.splitTextToSize(ln[1], 297 - 2 * X - 26)[0];
+      doc.text(t, X + 26, yy); yy += 5;
+    });
+    return doc;
+  }
+  $("pdf").addEventListener("click", function () {
+    if (!window.jspdf) { setMsg("Il generatore PDF non si è caricato: la prima volta serve internet. Riprova."); return; }
+    try { scaricaFile(buildPdf().output("blob"), "Casse " + giorno + ".pdf"); setMsg("PDF scaricato: aprilo e stampalo in A4 orizzontale.", true); }
+    catch (x) { setMsg("Non sono riuscito a creare il PDF. Riprova."); }
+  });
+
+  /* ---------- import da foto ---------- */
+  var DOW = ["lun", "mar", "mer", "gio", "ven", "sab", "dom"];
+  var imp = { mode: "giorno", rows: [], ctl: null, url: null, exist: {}, week: null, pending: null };
+  function mondayOf(g) { var d = new Date(g + "T12:00:00"); return shiftDay(g, -((d.getDay() + 6) % 7)); }
+  function opt(sel, values, val, placeholder, labels) {
+    sel.innerHTML = "";
+    if (placeholder !== undefined) { var o0 = document.createElement("option"); o0.value = ""; o0.textContent = placeholder; sel.appendChild(o0); }
+    values.forEach(function (v, i) { var o = document.createElement("option"); o.value = v; o.textContent = labels ? labels[i] : v; sel.appendChild(o); });
+    sel.value = val || "";
+  }
+  function toSlot(t) {
+    var str = String(t == null ? "" : t).trim();
+    var m = /^(\d{1,2})(?:[:.,](\d{2}))?$/.exec(str);
+    if (!m) return null;
+    var mins = Number(m[1]) * 60 + Number(m[2] || 0);
+    if (mins < 5 * 60) mins += 24 * 60;
+    mins = Math.round(mins / STEP) * STEP;
+    var fuori = mins < T0 || mins > T1;
+    mins = Math.max(T0, Math.min(T1, mins));
+    return { v: lab(mins), fuori: fuori };
+  }
+  function matchName(n) {
+    n = String(n || "").trim();
+    if (!n) return "";
+    var u = n.toUpperCase();
+    var esatto = STAFF.filter(function (x) { return x === u; })[0];
+    if (esatto) return esatto;
+    var simili = STAFF.filter(function (x) { return stessoNome(u, x); });
+    return simili.length === 1 ? simili[0] : n;
+  }
+  function impStatus(text, busy) {
+    var el = $("impStatus"); el.innerHTML = "";
+    if (busy) { var sp = document.createElement("span"); sp.className = "spin"; el.appendChild(sp); }
+    el.appendChild(document.createTextNode(text));
+    $("impStop").hidden = !busy;
+  }
+  function impReset() {
+    if (imp.ctl) imp.ctl.abort();
+    imp = { mode: "giorno", rows: [], ctl: null, url: imp.url, exist: {}, week: null, pending: null };
+    $("impPanel").hidden = true; $("impRows").innerHTML = ""; $("impMsg").textContent = "";
+    ["impTblWrap", "impActions", "impDate", "impWeekBox", "impSum"].forEach(function (id) { $(id).hidden = true; });
+  }
+  function bloccata(r) { return r.acc || (r.chiedi && r.dest !== "casse"); }
+  function autoAssignImp(force) {
+    var byDay = {};
+    imp.rows.forEach(function (r, i) {
+      if (!r.use || r.tipo !== "lavoro" || bloccata(r)) return;
+      if (force && !r.manual) r.riga = "";
+      (byDay[r.g] = byDay[r.g] || []).push({ id: "r" + i, nome: r.nome, riga: r.riga, da: r.da, a: r.a, dest: r.chiedi ? r.dest : "" });
+    });
+    Object.keys(byDay).forEach(function (g) {
+      var ex = ((imp.exist[g] || {}).turni || []).map(function (x, k) { return { id: "e" + k, nome: x.nome, riga: x.riga, da: x.da, a: x.a, dest: x.dest }; });
+      var res = autoAssign(ex.concat(byDay[g]));
+      Object.keys(res).forEach(function (id) { if (id.charAt(0) === "r") imp.rows[Number(id.slice(1))].riga = res[id]; });
+    });
+  }
+  async function loadExist(reassign) {
+    var days = {}; imp.rows.forEach(function (r) { days[r.g] = 1; });
+    var ks = Object.keys(days);
+    try {
+      var res = await Promise.all(ks.map(fetchDay));
+      ks.forEach(function (g, i) { imp.exist[g] = res[i]; });
+    } catch (e) { $("impMsg").textContent = "Non riesco a leggere i turni già salvati: il controllo dei doppioni è parziale."; }
+    imp.rows.forEach(function (r) {
+      if (r.dupChecked || !imp.exist[r.g]) return;
+      r.dupChecked = true;
+      var ex = imp.exist[r.g], n = r.nome.toLowerCase();
+      var dup = r.tipo === "lavoro"
+        ? ex.turni.some(function (x) { return x.nome.toLowerCase() === n && x.da === r.da && x.a === r.a; })
+        : ex.assenze.some(function (x) { return x.nome.toLowerCase() === n && x.tipo === r.tipo; });
+      if (dup) { r.use = false; r.nota = "Già presente sul foglio."; }
+    });
+    if (!imp.autoDone || reassign) { imp.autoDone = true; autoAssignImp(!!reassign); }
+    renderImp();
+  }
+  function batchCheck() {
+    var acc = {};
+    imp.rows.forEach(function (r) {
+      r.err = "";
+      if (!r.use) return;
+      if (r.acc && r.tipo === "lavoro") return;
+      var ex = imp.exist[r.g] || { turni: [], assenze: [] };
+      var a = acc[r.g] || (acc[r.g] = { turni: [], assenze: [] });
+      if (!r.nome) { r.err = "Manca il nome."; return; }
+      if (r.tipo === "lavoro" && r.chiedi && !r.dest) { if (imp.auto) return; r.err = "Scegli se " + r.nome + " va in cassa o al punto accoglienza."; return; }
+      if (r.tipo === "lavoro" && r.chiedi && r.dest === "accoglienza") return;
+      var n = r.nome.toLowerCase();
+      if (r.tipo === "lavoro") {
+        var rec = { nome: r.nome, riga: r.riga, da: r.da, a: r.a };
+        r.err = check(rec, null, ex.turni.concat(a.turni), ex.assenze.concat(a.assenze));
+        if (!r.err) a.turni.push(Object.assign({ id: "tmp" }, rec));
+      } else {
+        if (ex.assenze.concat(a.assenze).some(function (x) { return x.nome.toLowerCase() === n; })) r.err = r.nome + " è già segnato in riposi o ferie.";
+        else if (ex.turni.concat(a.turni).some(function (x) { return x.nome.toLowerCase() === n; })) r.err = r.nome + " ha già un turno in questo giorno.";
+        if (!r.err) a.assenze.push({ nome: r.nome, tipo: r.tipo });
+      }
+    });
+    return imp.rows.filter(function (r) { return r.use && r.err; }).length;
+  }
+  function cell(tr, cls) { var td = document.createElement("td"); if (cls) td.className = cls; tr.appendChild(td); return td; }
+  function small(td, text, cls) { var d = document.createElement("div"); d.className = cls || "src"; d.textContent = text; td.appendChild(d); }
+  function renderImp() {
+    batchCheck();
+    var TORD = { lavoro: 0, riposo: 1, ferie: 2 };
+    var order = imp.rows.slice().sort(function (x, y) {
+      return x.g < y.g ? -1 : x.g > y.g ? 1 : TORD[x.tipo] - TORD[y.tipo] || (x.da || "").localeCompare(y.da || "") || x.nome.localeCompare(y.nome);
+    });
+    var weekDates = imp.mode === "settimana" ? DOW.map(function (d, i) { return shiftDay(imp.week, i); }) : null;
+    var tb = $("impRows"); tb.innerHTML = ""; var lastG = null;
+    order.forEach(function (r) {
+      var i = imp.rows.indexOf(r);
+      if (r.g !== lastG) {
+        lastG = r.g;
+        var same = imp.rows.filter(function (x) { return x.g === r.g && x.use; });
+        var trh = document.createElement("tr"); trh.className = "dayrow";
+        var th = cell(trh); th.colSpan = 8; th.textContent = titolo(r.g);
+        var info = document.createElement("span");
+        var nl = same.filter(function (x) { return x.tipo === "lavoro"; }).length, nr = same.filter(function (x) { return x.tipo === "riposo"; }).length, nf = same.filter(function (x) { return x.tipo === "ferie"; }).length;
+        info.textContent = nl + " turni, " + nr + " riposi, " + nf + " ferie";
+        th.appendChild(info); tb.appendChild(trh);
+      }
+      var tr = document.createElement("tr"); if (!r.use) tr.className = "off";
+      var lav = r.tipo === "lavoro";
+
+      var c0 = cell(tr); var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = r.use; cb.id = "imp-use-" + i;
+      cb.setAttribute("aria-label", "Usa questa riga"); cb.addEventListener("change", function () { r.use = cb.checked; renderImp(); }); c0.appendChild(cb);
+
+      var c1 = cell(tr, "w-giorno");
+      if (weekDates) {
+        var gs = document.createElement("select"); gs.id = "imp-g-" + i; opt(gs, weekDates, r.g, undefined, weekDates.map(titolo));
+        gs.addEventListener("change", function () { r.g = gs.value; r.dow = weekDates.indexOf(gs.value); r.dupChecked = false; if (!r.manual) r.riga = ""; loadExist(); }); c1.appendChild(gs);
+      } else c1.textContent = titolo(r.g);
+
+      var c2 = cell(tr, "w-nome"); var ni = document.createElement("input"); ni.type = "text"; ni.id = "imp-nome-" + i; ni.value = r.nome; ni.setAttribute("list", "nomi");
+      ni.addEventListener("change", function () { r.nome = ni.value.trim(); renderImp(); }); c2.appendChild(ni);
+      if (r.letto && r.letto.toUpperCase() !== r.nome.toUpperCase()) small(c2, "Scritto: " + r.letto);
+
+      var c3 = cell(tr, "w-tipo"); var ts = document.createElement("select"); ts.id = "imp-tipo-" + i;
+      opt(ts, ["lavoro", "riposo", "ferie"], r.tipo, undefined, ["Lavoro", "Riposo", "Ferie"]);
+      ts.addEventListener("change", function () { r.tipo = ts.value; renderImp(); }); c3.appendChild(ts);
+
+      var c4 = cell(tr, "w-ora"), c5 = cell(tr, "w-ora"), c6 = cell(tr, "w-post");
+      if (lav) {
+        var ds = document.createElement("select"); ds.id = "imp-da-" + i; opt(ds, SLOTS, r.da);
+        ds.addEventListener("change", function () { r.da = ds.value; renderImp(); }); c4.appendChild(ds);
+        var as = document.createElement("select"); as.id = "imp-a-" + i; opt(as, SLOTS, r.a);
+        as.addEventListener("change", function () { r.a = as.value; renderImp(); }); c5.appendChild(as);
+        if (r.chiedi) {
+          var dsel = document.createElement("select"); dsel.id = "imp-dest-" + i;
+          opt(dsel, ["casse", "accoglienza"], r.dest, "Casse o accoglienza?", ["Turno casse", "Punto accoglienza"]);
+          dsel.addEventListener("change", function () { r.dest = dsel.value; if (r.dest === "casse") autoAssignImp(false); else r.riga = ""; renderImp(); });
+          c6.appendChild(dsel);
+        }
+        if (!r.chiedi || r.dest === "casse") {
+          var ps = document.createElement("select"); ps.id = "imp-post-" + i; opt(ps, ROWS.filter(function (x) { return !BLOCCATE[x]; }), r.riga, "Da assegnare");
+          ps.addEventListener("change", function () { r.riga = ps.value; r.manual = !!ps.value; renderImp(); }); c6.appendChild(ps);
+        }
+        if (r.rigaFoto) small(c6, "Riga " + r.rigaFoto + " della foto");
+      }
+
+      var c7 = cell(tr); var lv = document.createElement("span"); lv.className = "lvl " + r.certezza;
+      lv.textContent = { alta: "Sicura", media: "Da verificare", bassa: "Incerta" }[r.certezza]; c7.appendChild(lv);
+      if (r.nota) small(c7, r.nota);
+      if (r.err) small(c7, r.err, "warn");
+      tb.appendChild(tr);
+    });
+    var sel = imp.rows.filter(function (r) { return r.use && !(r.tipo === "lavoro" && r.chiedi && r.dest === "accoglienza"); });
+    var nl2 = sel.filter(function (r) { return r.tipo === "lavoro"; }).length, na = sel.length - nl2;
+    $("impAdd").textContent = "Aggiungi " + nl2 + (nl2 === 1 ? " turno" : " turni") + (na ? " e " + na + (na === 1 ? " riposo/ferie" : " riposi/ferie") : "");
+    $("impAdd").disabled = !sel.length;
+  }
+  function promptGiorno() {
+    return [
+      "La foto mostra un foglio turni giornaliero della barriera casse di un supermercato.",
+      "Di solito è una griglia: in alto gli orari (colonne, ogni mezz'ora dalle 7 a mezzanotte), a sinistra le righe numerate o con il nome della cassa (CASSA 1, CASSA 2...).",
+      "Ogni turno è scritto a mano: un nome tra due parentesi quadre o una linea. La parentesi aperta '[' segna l'inizio, quella chiusa ']' la fine. Leggi l'orario della colonna dove cade ogni parentesi.",
+      "Un numero scritto a mano fuori dalla griglia vicino a una parentesi (es. '7') indica un orario fuori scala (es. 07:00).",
+      "",
+      "Casse valide (usale come postazione): " + ROWS.join(" | "),
+      (STAFF.length ? "Dipendenti noti (COGNOME NOME): " + STAFF.join(" | ") : "Non c'è un elenco di dipendenti: riporta i nomi come sono scritti."),
+      "",
+      "Per ogni turno indica:",
+      "- letto: il nome esattamente come è scritto",
+      "Sul foglio i nomi sono spesso abbreviati o soprannomi (es. 'Giò' per Giovanna, 'Franci R.' per Francesca R.): abbinali al dipendente noto quando nome e iniziale del cognome sono compatibili e non c'è ambiguità, con certezza media. Se due dipendenti sono compatibili, non scegliere.",
+      "- nome: il dipendente noto corrispondente SOLO se sei sicuro, altrimenti ripeti il nome letto",
+      "- postazione: una delle postazioni valide se la riga è etichettata con quel nome, altrimenti null",
+      "- riga_foto: il numero della riga nella foto (1 = la prima), o null",
+      "- da, a: orari HH:MM",
+      "- certezza: alta, media o bassa",
+      "- nota: breve, solo se c'è un dubbio",
+      "Cerca anche la data scritta sul foglio (es. 'Domenica 11/10').",
+      "",
+      'Rispondi solo con JSON in questa forma: {"data": "DD/MM" o null, "turni": [{"letto": "Giò", "nome": "Giò", "postazione": null, "riga_foto": 2, "da": "11:30", "a": "14:00", "certezza": "media", "nota": ""}], "note": "eventuali problemi di lettura, in italiano, una frase"}'
+    ].join("\n");
+  }
+  function promptSettimana() {
+    return [
+      "La foto mostra la pianificazione settimanale dei turni delle casse di un supermercato.",
+      "Di solito è una tabella: una riga per dipendente, una colonna per giorno da lunedì a domenica, a volte con la data in testa alla colonna.",
+      "In ogni cella c'è l'orario di lavoro (es. '7-13', '7:00-13:00', '17.30-24' o '18-00' per chi chiude a mezzanotte), a volte due fasce (es. '7-13 / 16-20'), oppure una sigla: R, RIP o RIPOSO vuol dire riposo; F o FERIE vuol dire ferie. Cella vuota: niente.",
+      "",
+      (STAFF.length ? "Dipendenti noti (COGNOME NOME): " + STAFF.join(" | ") : "Non c'è un elenco di dipendenti: riporta i nomi come sono scritti."),
+      "",
+      "Restituisci una voce per ogni fascia di lavoro e una per ogni riposo o ferie. Una cella con due fasce diventa due voci.",
+      "Per ogni voce:",
+      "- letto: il nome come è scritto",
+      "Sul foglio i nomi sono spesso abbreviati o soprannomi (es. 'Giò' per Giovanna, 'Franci R.' per Francesca R.): abbinali al dipendente noto quando nome e iniziale del cognome sono compatibili e non c'è ambiguità, con certezza media. Se due dipendenti sono compatibili, non scegliere.",
+      "- nome: il dipendente noto corrispondente solo se sei sicuro, altrimenti ripeti il nome letto",
+      "- giorno: lun, mar, mer, gio, ven, sab o dom",
+      "- tipo: lavoro, riposo o ferie",
+      "- da, a: orari HH:MM solo per lavoro, altrimenti null. '7' vuol dire 07:00, '15.30' vuol dire 15:30",
+      "- certezza: alta, media o bassa",
+      "- nota: breve, solo se c'è un dubbio",
+      "Se le colonne hanno una data, riportala in date (DD/MM) per ogni giorno.",
+      "",
+      'Rispondi solo con JSON in questa forma: {"date": {"lun": "12/10", "mar": "13/10"}, "voci": [{"letto": "Rossi", "nome": "ROSSI MARIA", "giorno": "lun", "tipo": "lavoro", "da": "07:00", "a": "13:00", "certezza": "alta", "nota": ""}], "note": "eventuali problemi di lettura, in italiano, una frase"}'
+    ].join("\n");
+  }
+  function ddmm(str) {
+    var m = /^(\d{1,2})\/(\d{1,2})/.exec(String(str || "").trim());
+    if (!m) return null;
+    var g = giorno.slice(0, 4) + "-" + String(m[2]).padStart(2, "0") + "-" + String(m[1]).padStart(2, "0");
+    return isNaN(new Date(g + "T12:00:00")) ? null : g;
+  }
+  function makeRow(t, g, dow) {
+    var tipo = TIPI[t.tipo] ? t.tipo : "lavoro";
+    var cert = ["alta", "media", "bassa"].indexOf(t.certezza) >= 0 ? t.certezza : "media";
+    var r = { use: true, g: g, dow: dow, letto: String(t.letto || t.nome || ""), nome: matchName(t.nome || t.letto), tipo: tipo, riga: "", rigaFoto: null, da: "08:30", a: "13:00", certezza: cert, nota: String(t.nota || "") };
+    if (fuori(r.nome)) { var fr = fuori(r.nome); r.acc = true; r.riga = ""; r.nota = fr.charAt(0).toUpperCase() + fr.slice(1) + ": salvato fuori dal piano casse."; }
+    else if (tipo === "lavoro" && inLista(r.nome, ACC_CHIEDI)) { r.chiedi = true; r.dest = ""; }
+    if (tipo === "lavoro") {
+      var d1 = toSlot(t.da), d2 = toSlot(t.a);
+      if (d1) r.da = d1.v; if (d2) r.a = d2.v;
+      if (!d1 || !d2) { r.certezza = "bassa"; r.nota = (r.nota ? r.nota + " " : "") + "Orario non letto: inseriscilo tu."; }
+      else if (d1.fuori || d2.fuori) r.nota = (r.nota ? r.nota + " " : "") + "Orario fuori dal foglio (" + t.da + "-" + t.a + "), adattato.";
+      if (SLOTS.indexOf(r.a) <= SLOTS.indexOf(r.da)) r.a = SLOTS[Math.min(SLOTS.length - 1, SLOTS.indexOf(r.da) + 8)];
+    }
+    return r;
+  }
+  function startImport(mode) { imp.pending = mode; $("fotoInput").click(); }
+  $("foto").addEventListener("click", function () { startImport("giorno"); });
+  $("fotoSett").addEventListener("click", function () { startImport("settimana"); });
+  $("fotoInput").addEventListener("change", async function () {
+    var file = this.files && this.files[0]; this.value = "";
+    var mode = imp.pending || "giorno";
+    if (!file) return;
+    if (!canWrite) { setMsg("Hai accesso in sola lettura."); return; }
+    var sample = apiKey() ? claudeApi : null;
+    var lim = sample ? { images: { maxInputBytes: 40000000 } } : null;
+    impReset(); imp.mode = mode;
+    $("impCancel").textContent = "Scarta"; $("impAuto").hidden = false; $("impSum").innerHTML = "";
+    $("impTitle").textContent = mode === "settimana" ? "Settimana letta dalla foto" : "Turni letti dalla foto";
+    $("impPanel").hidden = false;
+    if (imp.url) { try { URL.revokeObjectURL(imp.url); } catch (e) {} }
+    imp.url = URL.createObjectURL(file); $("impImg").src = imp.url;
+    $("impPanel").scrollIntoView({ block: "start", behavior: "smooth" });
+    function fail(t, note) { impStatus(t, false); $("impNote").textContent = note || ""; $("impActions").hidden = false; $("impAdd").hidden = true; }
+    if (!sample) return fail("Per leggere le foto serve la chiave API Anthropic.", "Inseriscila in Impostazioni (pulsante in alto). In alternativa inserisci i turni a mano dal modulo.");
+    if (lim.images.maxInputBytes && file.size > lim.images.maxInputBytes) return fail("La foto è troppo grande.", "Usa una foto più leggera, ad esempio uno screenshot o una foto a risoluzione normale.");
+    $("impAdd").hidden = false;
+    impStatus(mode === "settimana" ? "Sto leggendo la settimana. Può servire anche un paio di minuti." : "Sto leggendo la foto. Può servire fino a un minuto.", true);
+    $("impNote").textContent = "";
+    imp.ctl = new AbortController();
+    try {
+      var res = await sample.json(mode === "settimana" ? promptSettimana() : promptGiorno(), { images: [file], modelTier: "complex", signal: imp.ctl.signal });
+      imp.ctl = null;
+      if (mode === "settimana") {
+        var voci = res && Array.isArray(res.voci) ? res.voci : [];
+        var week = null, dates = (res && res.date) || {};
+        DOW.forEach(function (d, i) { if (!week) { var g = ddmm(dates[d]); if (g) week = shiftDay(g, -i); } });
+        imp.week = week || mondayOf(shiftDay(giorno, 7 - ((new Date(giorno + "T12:00:00").getDay() + 6) % 7)));
+        imp.rows = voci.filter(function (t) { return DOW.indexOf(t.giorno) >= 0; }).map(function (t) {
+          var i = DOW.indexOf(t.giorno); return makeRow(t, shiftDay(imp.week, i), i);
+        });
+        imp.dateFromPhoto = !!week; $("impWeek").value = imp.week;
+        if (!imp.rows.length) return fail("Non ho trovato turni nella foto.", (res && res.note) || "Prova con una foto più nitida, scattata dritta e con buona luce.");
+        var persone = {}; imp.rows.forEach(function (r) { persone[r.nome.toLowerCase()] = 1; });
+        var nl = imp.rows.filter(function (r) { return r.tipo === "lavoro"; }).length;
+        impStatus("Ho letto " + Object.keys(persone).length + " dipendenti: " + nl + " turni e " + (imp.rows.length - nl) + " tra riposi e ferie. Controlla prima di aggiungerli.", false);
+        $("impNote").textContent = ((res && res.note) ? res.note + " " : "") + (week ? "Le date le ho prese dalla foto." : "Sulla foto non ho trovato le date: controlla la settimana qui sotto.") + " Le casse le ho assegnate con i tuoi criteri: puoi cambiarle qui. Per le persone da chiedere scegli tu se casse o punto accoglienza.";
+      } else {
+        var turni = res && Array.isArray(res.turni) ? res.turni : [];
+        imp.rows = turni.map(function (t) {
+          var r = makeRow(t, giorno, null);
+          var rf = Number(t.riga_foto) || null;
+          if (ROWS.indexOf(t.postazione) >= 0) { r.riga = t.postazione; r.manual = true; }
+          else if (rf) { r.rigaFoto = rf; if (rf <= ROWS.length) { r.riga = ROWS[rf - 1]; r.manual = true; } if (r.certezza === "alta") r.certezza = "media"; }
+          var ammF = casseAmmesse(r.nome);
+          if (r.riga && (BLOCCATE[r.riga] || (ammF && ammF.indexOf(r.riga) < 0) || (!ammF && chiude(r) && CASSE_CHIUSURA.indexOf(r.riga) < 0))) {
+            r.nota = (r.nota ? r.nota + " " : "") + "Sulla foto era in " + r.riga + ": spostato secondo i criteri."; r.riga = ""; r.manual = false;
+          }
+          return r;
+        });
+        if (!imp.rows.length) return fail("Non ho trovato turni nella foto.", (res && res.note) || "Prova con una foto più nitida, scattata dritta e con buona luce.");
+        impStatus("Ho letto " + imp.rows.length + (imp.rows.length === 1 ? " turno" : " turni") + ". Controlla e correggi prima di aggiungerli.", false);
+        $("impNote").textContent = (res && res.note) || "Le casse prese dal numero di riga della foto sono da verificare.";
+        var g2 = res && ddmm(res.data);
+        imp.photoDate = g2 || null;
+        if (g2 && g2 !== giorno) {
+          var dd = $("impDate"); dd.hidden = false; dd.innerHTML = "";
+          dd.appendChild(document.createTextNode("Sulla foto c'è scritto " + titolo(g2) + ", ma stai guardando " + titolo(giorno) + "."));
+          var b = document.createElement("button"); b.type = "button"; b.className = "btn"; b.textContent = "Usa " + titolo(g2);
+          b.addEventListener("click", function () { imp.rows.forEach(function (r) { r.g = g2; r.dupChecked = false; }); dd.hidden = true; loadExist(); });
+          dd.appendChild(b);
+        }
+      }
+      await pianificaSubito();
+    } catch (e) {
+      imp.ctl = null;
+      var code = e && e.code;
+      if (code === "cancelled") return fail("Lettura interrotta.");
+      fail({
+        bad_key: "La chiave API non è valida o è scaduta: controllala in Impostazioni.",
+        network: "Connessione assente: per leggere le foto serve internet.",
+        bad_request: "Richiesta rifiutata dal servizio" + (e && e.message ? ": " + e.message : ".") ,
+        overloaded: "Il servizio è sovraccarico in questo momento. Riprova tra qualche minuto.",
+        rate_limited: "Troppe richieste ravvicinate o limite di utilizzo raggiunto. Riprova tra qualche minuto.",
+        image_rejected: "Questa foto non si può usare. Prova con un JPG o PNG.",
+        invalid_json: "Non sono riuscito a ricavare i turni dalla foto. Riprova con una foto più nitida.",
+        refused: "Non sono riuscito a leggere questa foto. Prova con un'altra."
+      }[code] || "Lettura non riuscita. Riprova tra poco.");
+    }
+  });
+  async function pianificaSubito() {
+    imp.auto = true;
+    $("impDate").hidden = true; $("impWeekBox").hidden = true; $("impTblWrap").hidden = true;
+    if (imp.mode === "giorno" && imp.photoDate) imp.rows.forEach(function (r) { r.g = imp.photoDate; });
+    imp.rows.forEach(function (r) { r.manual = false; r.dupChecked = false; });
+    impStatus("Pianifico i turni con i tuoi criteri...", true); $("impStop").hidden = true;
+    await loadExist(true);
+    batchCheck();
+    var esclusi = imp.rows.filter(function (r) { return r.acc && r.use && r.tipo === "lavoro"; });
+    var gia = imp.rows.filter(function (r) { return !r.use; });
+    var conflitti = imp.rows.filter(function (r) { return r.use && r.err; });
+    var todo = imp.rows.filter(function (r) { return r.use && !r.err; });
+    var done = 0, nt = 0, na = 0, senza = 0, dec = 0, firstG = null, lastG = null, errore = false;
+    for (var i = 0; i < todo.length; i++) {
+      var r = todo[i];
+      try {
+        if (r.tipo === "lavoro") {
+          var dacc = r.chiedi && r.dest === "accoglienza";
+          await addOn("turni", r.g, { nome: r.nome, riga: dacc || r.acc ? "" : r.riga, da: r.da, a: r.a, dest: r.chiedi ? r.dest : "" });
+          if (!r.acc) { nt++; if (r.chiedi && !r.dest) dec++; else if (!r.riga && !dacc) senza++; }
+        } else { await addOn("assenze", r.g, { nome: r.nome, tipo: r.tipo }); na++; }
+        rememberName(r.nome); done++;
+        if (!firstG || r.g < firstG) firstG = r.g;
+        if (!lastG || r.g > lastG) lastG = r.g;
+        impStatus("Salvo " + done + " di " + todo.length + "...", true); $("impStop").hidden = true;
+      } catch (x) { errore = true; break; }
+    }
+    // riepilogo
+    impStatus(errore ? "Salvataggio interrotto: salvati " + done + " su " + todo.length + ". Ricarica la foto per completare." : "Piano fatto.", false);
+    var periodo = firstG ? (firstG === lastG ? titolo(firstG) : "dal " + titolo(firstG) + " al " + titolo(lastG)) : "";
+    $("impNote").textContent = periodo ? "Turni messi " + periodo + (imp.mode === "settimana" && !imp.dateFromPhoto ? " (sulla foto non c'erano le date: controlla che sia la settimana giusta)." : ".") : "";
+    var sum = $("impSum"); sum.innerHTML = ""; sum.hidden = false;
+    [[nt, nt === 1 ? "turno pianificato" : "turni pianificati"],
+     [na, "tra riposi e ferie"],
+     [senza, senza === 1 ? "turno senza cassa libera: è in Da assegnare" : "turni senza cassa libera: sono in Da assegnare"],
+     [dec, dec === 1 ? "turno da decidere, casse o accoglienza: te lo chiedo quando apri il giorno" : "turni da decidere, casse o accoglienza: te lo chiedo quando apri il giorno"],
+     [esclusi.length, "salvati al punto accoglienza o tra gli esclusi: li vedi sotto il foglio casse"],
+     [gia.length, gia.length === 1 ? "già presente, saltato" : "già presenti, saltati"],
+     [conflitti.length, conflitti.length === 1 ? "non messo per un conflitto" : "non messi per un conflitto"]].forEach(function (x) {
+      if (!x[0]) return;
+      var sp = document.createElement("span"); var b = document.createElement("b"); b.textContent = x[0];
+      sp.appendChild(b); sp.appendChild(document.createTextNode(" " + x[1])); sum.appendChild(sp);
+    });
+    var m = $("impMsg"); m.className = "msg";
+    m.textContent = conflitti.length ? "Non messi: " + conflitti.slice(0, 6).map(function (r) { return r.nome + " " + titolo(r.g).split(" ")[1] + " (" + r.err + ")"; }).join("; ") + (conflitti.length > 6 ? "; e altri " + (conflitti.length - 6) + "." : "") : "";
+    $("impActions").hidden = false; $("impAdd").hidden = true; $("impAuto").hidden = true; $("impCancel").textContent = "Chiudi";
+    if (firstG && firstG !== giorno) setDay(firstG);
+  }
+
+  $("impWeek").addEventListener("change", function () {
+    if (!this.value) return;
+    imp.week = mondayOf(this.value); this.value = imp.week;
+    imp.rows.forEach(function (r) { if (r.dow != null) { r.g = shiftDay(imp.week, r.dow); r.dupChecked = false; } });
+    loadExist(true);
+  });
+  $("impAuto").addEventListener("click", function () { autoAssignImp(true); renderImp(); $("impMsg").className = "msg ok"; $("impMsg").textContent = "Casse riassegnate con i criteri. Le scelte fatte a mano restano."; });
+  $("impStop").addEventListener("click", function () { if (imp.ctl) imp.ctl.abort(); });
+  $("impCancel").addEventListener("click", function () { impReset(); });
+  $("impAdd").addEventListener("click", async function () {
+    var bad = batchCheck();
+    if (bad) { renderImp(); $("impMsg").textContent = bad === 1 ? "Una riga ha un problema: correggila o togli la spunta." : bad + " righe hanno un problema: correggile o togli la spunta."; return; }
+    var todo = imp.rows.filter(function (r) { return r.use; });
+    var btn = this; btn.disabled = true; var done = 0, nt = 0, na = 0, firstG = null;
+    try {
+      for (var i = 0; i < todo.length; i++) {
+        var r = todo[i];
+        if (r.tipo === "lavoro") { var dacc = r.chiedi && r.dest === "accoglienza"; await addOn("turni", r.g, { nome: r.nome, riga: dacc ? "" : r.riga, da: r.da, a: r.a, dest: r.chiedi ? r.dest : "" }); nt++; }
+        else { await addOn("assenze", r.g, { nome: r.nome, tipo: r.tipo }); na++; }
+        rememberName(r.nome); done++;
+        if (!firstG || r.g < firstG) firstG = r.g;
+        $("impMsg").className = "msg ok"; $("impMsg").textContent = "Salvo " + done + " di " + todo.length + "...";
+      }
+      var wasWeek = imp.mode === "settimana";
+      impReset();
+      if (firstG && firstG !== giorno) setDay(firstG);
+      setMsg("Aggiunti " + nt + (nt === 1 ? " turno" : " turni") + (na ? " e " + na + " tra riposi e ferie" : "") + (wasWeek ? " sulla settimana. Usa le frecce in alto per scorrere i giorni." : "."), true);
+    } catch (x) {
+      $("impMsg").className = "msg";
+      $("impMsg").textContent = "Salvati " + done + " su " + todo.length + ". Gli altri non sono stati salvati: riprova.";
+      todo.slice(0, done).forEach(function (r) { r.use = false; r.nota = "Già salvato."; r.dupChecked = true; });
+      renderImp();
+    } finally { btn.disabled = false; }
+  });
+
+  /* ---------- lettura foto con l'API di Claude (chiave dell'utente) ---------- */
+  var MODELLO = "claude-opus-5-5";
+  function apiKey() { return lsGet(KEY_API) || ""; }
+  async function immagineBase64(file) {
+    var url = URL.createObjectURL(file);
+    try {
+      var img = await new Promise(function (ok, ko) { var i = new Image(); i.onload = function () { ok(i); }; i.onerror = ko; i.src = url; });
+      var sc = Math.min(1, 2400 / Math.max(img.naturalWidth, img.naturalHeight));
+      var c = document.createElement("canvas"); c.width = Math.round(img.naturalWidth * sc); c.height = Math.round(img.naturalHeight * sc);
+      var ctx = c.getContext("2d"); ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height);
+      return c.toDataURL("image/jpeg", 0.88).split(",")[1];
+    } finally { URL.revokeObjectURL(url); }
+  }
+  function estraiJson(t) {
+    try { return JSON.parse(t); } catch (e) {}
+    var m = /```(?:json)?\s*([\s\S]*?)```/.exec(t);
+    if (m) { try { return JSON.parse(m[1]); } catch (e) {} }
+    var i = t.search(/[\[{]/), j = Math.max(t.lastIndexOf("}"), t.lastIndexOf("]"));
+    if (i >= 0 && j > i) { try { return JSON.parse(t.slice(i, j + 1)); } catch (e) {} }
+    return undefined;
+  }
+  var claudeApi = {
+    json: async function (prompt, opts) {
+      var data;
+      try { data = await immagineBase64(opts.images[0]); } catch (e) { throw { code: "image_rejected" }; }
+      // conRiserva: se il modello declina la richiesta, il servizio passa da solo a un altro modello
+      async function chiama(conRiserva) {
+        var headers = {
+          "content-type": "application/json",
+          "x-api-key": apiKey(),
+          "anthropic-version": "2026-10-21",
+          "anthropic-dangerous-direct-browser-access": "true"
+        };
+        var body = {
+          model: MODELLO, max_tokens: 16000,
+          thinking: { type: "adaptive" }, output_config: { effort: "high" },
+          messages: [{ role: "user", content: [
+            { type: "image", source: { type: "base64", media_type: "image/jpeg", data: data } },
+            { type: "text", text: prompt }
+          ] }]
+        };
+        if (conRiserva) { headers["anthropic-beta"] = "server-side-fallback-2026-07-01"; body.fallbacks = "default"; }
+        try {
+          return await fetch("https://api.anthropic.com/v1/messages", { method: "POST", signal: opts.signal, headers: headers, body: JSON.stringify(body) });
+        } catch (e) { throw { code: e && e.name === "AbortError" ? "cancelled" : "network" }; }
+      }
+      async function dettaglio(r) { try { var eb = await r.json(); return eb && eb.error && eb.error.message || ""; } catch (e) { return ""; } }
+      var res = await chiama(true), dett = "";
+      if (res.status === 400) {
+        // se l'opzione di riserva non è accettata, riprova con la richiesta semplice
+        dett = await dettaglio(res);
+        if (/fallback|beta/i.test(dett)) { res = await chiama(false); dett = ""; }
+        else throw { code: "bad_request", message: dett };
+      }
+      if (!res.ok) {
+        if (!dett) dett = await dettaglio(res);
+        throw { code: res.status === 401 || res.status === 403 ? "bad_key" : res.status === 429 ? "rate_limited" : res.status === 529 ? "overloaded" : res.status === 400 ? "bad_request" : "upstream_error", message: dett };
+      }
+      var msg = await res.json();
+      if (msg.stop_reason === "refusal") throw { code: "refused" };
+      var testo = (msg.content || []).filter(function (b) { return b.type === "text"; }).map(function (b) { return b.text; }).join("\n");
+      var outv = estraiJson(testo);
+      if (outv === undefined) throw { code: "invalid_json" };
+      return outv;
+    }
+  };
+
+  /* ---------- file: scarica, esporta e apri il piano ---------- */
+  function scaricaFile(blob, nome) {
+    var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nome;
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+  }
+  function chiaviDati() {
+    var out = [];
+    for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (/^(turni|assenze):\d{4}-\d{2}-\d{2}$/.test(k)) out.push(k); }
+    return out;
+  }
+  function esportaPiano() {
+    var turni = {}, ass = {};
+    chiaviDati().forEach(function (k) {
+      var arr = []; try { arr = JSON.parse(localStorage.getItem(k) || "[]"); } catch (e) {}
+      if (!arr.length) return;
+      var p = k.split(":"); (p[0] === "turni" ? turni : ass)[p[1]] = arr;
+    });
+    var dati = { app: "foglio-casse", versione: 1, esportato: new Date().toISOString(), config: CFG, turni: turni, assenze: ass };
+    var nome = "piano-casse-" + oggi() + ".json";
+    var blob = new Blob([JSON.stringify(dati)], { type: "application/json" });
+    var file = null; try { file = new File([blob], nome, { type: "application/json" }); } catch (e) {}
+    var touch = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+    if (touch && file && navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], title: "Piano casse" }).catch(function () {});
+    } else scaricaFile(blob, nome);
+    setMsg("Piano esportato in " + nome + ": mandalo al tablet e aprilo con «Apri piano».", true);
+  }
+  var pianoInArrivo = null;
+  $("esporta").addEventListener("click", esportaPiano);
+  $("apri").addEventListener("click", function () { $("apriInput").click(); });
+  $("apriInput").addEventListener("change", async function () {
+    var f = this.files && this.files[0]; this.value = "";
+    if (!f) return;
+    var d = null; try { d = JSON.parse(await f.text()); } catch (e) {}
+    if (!d || d.app !== "foglio-casse") { setMsg("Questo file non è un piano del Foglio Casse."); return; }
+    pianoInArrivo = d;
+    var quando = d.esportato ? new Date(d.esportato).toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" }) : "data sconosciuta";
+    var giorni = Object.keys(d.turni || {}).length;
+    $("fileTxt").textContent = "Piano esportato il " + quando + " (" + giorni + " giorni con turni). Sostituisce turni, riposi, ferie e nomi salvati su questo dispositivo.";
+    $("fileBar").hidden = false; $("fileBar").scrollIntoView({ block: "nearest" });
+  });
+  $("fileNo").addEventListener("click", function () { pianoInArrivo = null; $("fileBar").hidden = true; });
+  $("fileOk").addEventListener("click", function () {
+    var d = pianoInArrivo; if (!d) return;
+    chiaviDati().forEach(function (k) { localStorage.removeItem(k); });
+    Object.keys(d.turni || {}).forEach(function (g) { lsSet("turni:" + g, JSON.stringify(d.turni[g])); });
+    Object.keys(d.assenze || {}).forEach(function (g) { lsSet("assenze:" + g, JSON.stringify(d.assenze[g])); });
+    if (d.config) lsSet(CFG_KEY, JSON.stringify(d.config));
+    location.reload();
+  });
+
+  /* ---------- pannello impostazioni ---------- */
+  function righe(t) { return String(t || "").split(/\n/).map(function (x) { return x.trim().replace(/\s+/g, " ").toUpperCase(); }).filter(Boolean); }
+  function riempiImpostazioni() {
+    $("cfgStaff").value = CFG.staff.join("\n"); $("cfgBox").value = CFG.box.join("\n"); $("cfgChiedi").value = CFG.chiedi.join("\n");
+    $("cfgFisse").value = CFG.fisse710.join("\n"); $("cfgEsclusi").value = CFG.esclusi.join("\n");
+    $("cfgLunghe").value = CFG.lunghe.map(function (x) { return x[0] + "; " + x[1]; }).join("\n");
+    $("cfgKey").value = apiKey();
+  }
+  $("impostazioni").addEventListener("click", function () {
+    var sec = $("setSec"); sec.hidden = !sec.hidden;
+    if (!sec.hidden) { riempiImpostazioni(); sec.scrollIntoView({ block: "start", behavior: "smooth" }); }
+  });
+  $("cfgSave").addEventListener("click", function () {
+    var nuova = {
+      staff: righe($("cfgStaff").value), box: righe($("cfgBox").value), chiedi: righe($("cfgChiedi").value),
+      fisse710: righe($("cfgFisse").value), esclusi: righe($("cfgEsclusi").value),
+      lunghe: String($("cfgLunghe").value || "").split(/\n/).map(function (x) {
+        var p = x.split(";"); var n = (p[0] || "").trim().replace(/\s+/g, " ").toUpperCase(); return n ? [n, (p[1] || "assenza").trim().toLowerCase()] : null;
+      }).filter(Boolean)
+    };
+    lsSet(CFG_KEY, JSON.stringify(nuova));
+    var k = $("cfgKey").value.trim();
+    try { if (k) localStorage.setItem(KEY_API, k); else localStorage.removeItem(KEY_API); } catch (e) {}
+    location.reload();
+  });
+
+  /* ---------- avvio ---------- */
+  $("giorno").value = giorno;
+  render();
+  (function init() {
+    $("stato").textContent = "Dati salvati su questo dispositivo";
+    subscribe();
+    if (!CFG.staff.length) {
+      $("setSec").hidden = false; riempiImpostazioni();
+      $("cfgMsg").className = "msg ok";
+      $("cfgMsg").textContent = "Primo avvio: apri il file del piano con «Apri piano», oppure scrivi qui i nomi e le regole e salva.";
+    }
+    if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(function () {});
+  })();
+})();
+</script>
+</body>
+</html>
