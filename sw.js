@@ -1,6 +1,6 @@
 // Foglio Casse: funziona anche senza connessione dopo la prima apertura.
 // Le richieste all'API di Claude (lettura foto) non passano mai dalla cache.
-var CACHE = "foglio-casse-v2";
+var CACHE = "foglio-casse-v3";
 var FILES = [
   "./",
   "./index.html",

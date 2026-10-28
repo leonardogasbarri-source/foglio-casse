@@ -316,6 +316,14 @@ form { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
 .f.key { max-width: 520px; margin-bottom: 8px; }
 .f.key input { width: 100%; box-sizing: border-box; }
 
+/* PIN e sola consultazione */
+.pin-input { font-size: 24px; letter-spacing: .4em; text-align: center; max-width: 220px; }
+.pin-off { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 4px 0 6px; }
+body.locked #panel, body.locked #foto, body.locked #fotoSett, body.locked #esporta, body.locked #impostazioni,
+body.locked #setSec, body.locked #impPanel, body.locked #todo .actions, body.locked .regen .btn,
+body.locked #assForm, body.locked .x, body.locked #decSec .actions, body.locked #boxSec .legend { display: none !important; }
+body.locked .lane, body.locked .bar, body.locked .todo-card { cursor: default; }
+
 @media (max-width: 560px) {
   .hero { padding: 18px; }
   h1 { font-size: 40px; }
@@ -352,6 +360,8 @@ form { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
       <button class="btn" id="apri" type="button">Apri piano</button>
       <input type="file" id="apriInput" accept=".json,application/json" hidden>
       <button class="btn" id="impostazioni" type="button">Impostazioni</button>
+      <button class="btn light" id="sblocca" type="button" hidden>Inserisci PIN</button>
+      <button class="btn" id="blocca" type="button" hidden>Blocca</button>
       <button class="btn light" id="pdf" type="button">Scarica PDF</button>
     </div>
   </header>
@@ -372,6 +382,9 @@ form { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
       <div class="f"><label for="cfgEsclusi">Mai nella pianificazione</label><textarea id="cfgEsclusi" rows="3"></textarea></div>
       <div class="f"><label for="cfgLunghe">Assenze lunghe (COGNOME NOME; motivo)</label><textarea id="cfgLunghe" rows="3"></textarea></div>
     </div>
+    <div class="f key"><label for="cfgPin">PIN di accesso completo (4-8 cifre)</label><input id="cfgPin" type="password" inputmode="numeric" autocomplete="off" placeholder="lascia vuoto per non cambiarlo"></div>
+    <label class="pin-off"><input type="checkbox" id="cfgPinOff"> Togli il PIN: tutti i dispositivi potranno modificare</label>
+    <p class="set-note">Con il PIN, chi apre il piano senza inserirlo lo vede in sola consultazione. Il PIN viaggia nel file del piano solo come impronta cifrata, mai in chiaro.</p>
     <div class="f key"><label for="cfgKey">Chiave API Anthropic, per leggere le foto</label><input id="cfgKey" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-..."></div>
     <p class="set-note">La chiave resta solo su questo dispositivo e non entra mai nel file del piano. Ogni lettura di una foto è addebitata sul tuo account Anthropic. Sui tablet che servono solo a consultare il piano non serve.</p>
     <div class="actions"><button class="btn primary" id="cfgSave" type="button">Salva impostazioni</button></div>
@@ -434,6 +447,16 @@ form { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
     <div class="actions"><button class="btn primary" id="autoBtn" type="button">Assegna casse automaticamente</button></div>
     <div class="todo-list" id="todoList"></div>
   </section>
+
+  <div class="modal" id="pinModal" hidden role="dialog" aria-modal="true" aria-labelledby="pinTitle">
+    <form class="modal-box" id="pinForm" autocomplete="off">
+      <h2 id="pinTitle">Accesso completo</h2>
+      <p class="modal-sub">Inserisci il PIN per modificare il piano, caricare le foto e assegnare le casse.</p>
+      <input id="pinInput" type="password" inputmode="numeric" autocomplete="off" aria-label="PIN" class="pin-input">
+      <div class="msg" id="pinMsg" role="status" aria-live="polite"></div>
+      <div class="actions"><button class="btn primary" type="submit">Sblocca</button><button class="btn" id="pinNo" type="button">Annulla</button></div>
+    </form>
+  </div>
 
   <div class="modal" id="decModal" hidden role="dialog" aria-modal="true" aria-labelledby="decTitle">
     <div class="modal-box">
@@ -503,6 +526,7 @@ form { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
     try {
       var c = JSON.parse(window.localStorage.getItem(CFG_KEY) || "{}");
       Object.keys(d).forEach(function (k) { if (Array.isArray(c[k])) d[k] = c[k]; });
+      if (typeof c.pinHash === "string") d.pinHash = c.pinHash;
     } catch (e) {}
     return d;
   }
@@ -793,6 +817,7 @@ form { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
     return { giorno: giorno, nome: nome, riga: riga, da: $("da").value, a: $("a").value, dest: dest };
   }
   function startEdit(s) {
+    if (!canWrite) return;
     editingId = s.id; armed = false;
     $("nome").value = s.nome; $("riga").value = collocazione(s) === "punto accoglienza" ? "ACC" : s.riga; $("da").value = s.da; $("a").value = s.a;
     $("panel").classList.add("editing"); $("ftitle").textContent = "Modifica turno"; $("salva").textContent = "Salva modifiche";
@@ -808,6 +833,7 @@ form { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
     $("nome").value = ""; setMsg("");
   }
   function onLaneClick(e) {
+    if (!canWrite) return;
     if (e.target.closest(".bar")) return;
     if (BLOCCATE[e.currentTarget.dataset.riga]) { setMsg(bloccataMsg(e.currentTarget.dataset.riga)); return; }
     if (e.currentTarget.dataset.riga === "ACC") {
@@ -1918,6 +1944,25 @@ form { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
     location.reload();
   });
 
+  /* ---------- PIN: accesso completo o sola consultazione ---------- */
+  var KEY_SBLOCCO = "app:sblocco";
+  async function impronta(pin) {
+    var b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("foglio-casse:" + pin));
+    return Array.prototype.map.call(new Uint8Array(b), function (x) { return x.toString(16).padStart(2, "0"); }).join("");
+  }
+  var bloccata = !!CFG.pinHash && lsGet(KEY_SBLOCCO) !== CFG.pinHash;
+  function apriPin() { $("pinMsg").textContent = ""; $("pinInput").value = ""; $("pinModal").hidden = false; setTimeout(function () { $("pinInput").focus(); }, 30); }
+  $("sblocca").addEventListener("click", apriPin);
+  $("pinNo").addEventListener("click", function () { $("pinModal").hidden = true; });
+  $("pinForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    var pin = $("pinInput").value.trim();
+    if (!pin) return;
+    if ((await impronta(pin)) === CFG.pinHash) { lsSet(KEY_SBLOCCO, CFG.pinHash); location.reload(); }
+    else { $("pinMsg").textContent = "PIN sbagliato. Riprova."; $("pinInput").select(); }
+  });
+  $("blocca").addEventListener("click", function () { try { localStorage.removeItem(KEY_SBLOCCO); } catch (e) {} location.reload(); });
+
   /* ---------- pannello impostazioni ---------- */
   function righe(t) { return String(t || "").split(/\n/).map(function (x) { return x.trim().replace(/\s+/g, " ").toUpperCase(); }).filter(Boolean); }
   function riempiImpostazioni() {
@@ -1930,7 +1975,13 @@ form { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
     var sec = $("setSec"); sec.hidden = !sec.hidden;
     if (!sec.hidden) { riempiImpostazioni(); sec.scrollIntoView({ block: "start", behavior: "smooth" }); }
   });
-  $("cfgSave").addEventListener("click", function () {
+  $("cfgSave").addEventListener("click", async function () {
+    var pinNuovo = $("cfgPin").value.trim(), pinHash = CFG.pinHash || "";
+    if ($("cfgPinOff").checked) pinHash = "";
+    else if (pinNuovo) {
+      if (!/^\d{4,8}$/.test(pinNuovo)) { $("cfgMsg").className = "msg"; $("cfgMsg").textContent = "Il PIN deve avere da 4 a 8 cifre."; return; }
+      pinHash = await impronta(pinNuovo);
+    }
     var nuova = {
       staff: righe($("cfgStaff").value), box: righe($("cfgBox").value), chiedi: righe($("cfgChiedi").value),
       fisse710: righe($("cfgFisse").value), esclusi: righe($("cfgEsclusi").value),
@@ -1938,6 +1989,7 @@ form { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
         var p = x.split(";"); var n = (p[0] || "").trim().replace(/\s+/g, " ").toUpperCase(); return n ? [n, (p[1] || "assenza").trim().toLowerCase()] : null;
       }).filter(Boolean)
     };
+    if (pinHash) { nuova.pinHash = pinHash; lsSet(KEY_SBLOCCO, pinHash); }
     lsSet(CFG_KEY, JSON.stringify(nuova));
     var k = $("cfgKey").value.trim();
     try { if (k) localStorage.setItem(KEY_API, k); else localStorage.removeItem(KEY_API); } catch (e) {}
@@ -1948,9 +2000,15 @@ form { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
   $("giorno").value = giorno;
   render();
   (function init() {
-    $("stato").textContent = "Dati salvati su questo dispositivo";
+    if (bloccata) {
+      canWrite = false;
+      document.body.classList.add("locked");
+      $("stato").textContent = "Sola consultazione: inserisci il PIN per modificare";
+    } else $("stato").textContent = "Dati salvati su questo dispositivo" + (CFG.pinHash ? " \u00b7 accesso completo" : "");
+    $("sblocca").hidden = !bloccata;
+    $("blocca").hidden = bloccata || !CFG.pinHash;
     subscribe();
-    if (!CFG.staff.length) {
+    if (!CFG.staff.length && !bloccata) {
       $("setSec").hidden = false; riempiImpostazioni();
       $("cfgMsg").className = "msg ok";
       $("cfgMsg").textContent = "Primo avvio: apri il file del piano con «Apri piano», oppure scrivi qui i nomi e le regole e salva.";
