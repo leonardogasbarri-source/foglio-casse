@@ -856,7 +856,7 @@ form { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
   $("autoBtn").addEventListener("click", async function () {
     if (!canWrite) { setMsg("Hai accesso in sola lettura."); return; }
     var res = autoAssign(shifts), ids = Object.keys(res), btn = this;
-    var acc = shifts.filter(function (s) { return !s.riga && collocazione(s); }).map(function (s) { return s.nome; });
+    var acc = shifts.filter(function (s) { var c = collocazione(s); return !s.riga && c && c !== "punto accoglienza" && c !== "da decidere"; }).map(function (s) { return s.nome; });
     if (!ids.length) { setMsg(acc.length ? acc.join(", ") + (acc.length === 1 ? " sta" : " stanno") + " fuori dal piano casse: elimina il turno." : "Non ci sono turni da assegnare."); return; }
     btn.disabled = true; var done = 0;
     try {
