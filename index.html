@@ -324,6 +324,27 @@ body.locked #setSec, body.locked #impPanel, body.locked #todo .actions, body.loc
 body.locked #assForm, body.locked .x, body.locked #decSec .actions, body.locked #boxSec .legend { display: none !important; }
 body.locked .lane, body.locked .bar, body.locked .todo-card { cursor: default; }
 
+/* tabella settimanale */
+.wk-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 20px; margin-bottom: 12px; }
+.wk-lbl { font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.wk-help { margin: 0; font-size: 13px; color: var(--muted); flex: 1 1 380px; min-width: 0; }
+.wk-help b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.wk-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+.wk { border-collapse: collapse; width: 100%; min-width: 860px; font-size: 13px; }
+.wk th { background: var(--band); font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); }
+.wk td { padding: 4px 5px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.wk tr:last-child td { border-bottom: 0; }
+.wk .n { position: sticky; left: 0; z-index: 1; background: var(--surface); white-space: nowrap; font-weight: 600; padding-left: 10px; min-width: 190px; }
+.wk th.n { background: var(--band); }
+.wk .n small { display: block; font-size: 10.5px; font-weight: 500; color: var(--muted); }
+.wk input { width: 100%; min-width: 86px; min-height: 32px; padding: 4px 7px; font-variant-numeric: tabular-nums; box-sizing: border-box; }
+.wk input.rip { background: var(--s-lav); }
+.wk input.fer { background: var(--s-pane); }
+.wk input.box { background: var(--ok-soft); }
+.wk input.err { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, var(--bg)); }
+.wk-actions { margin-top: 12px; }
+body.locked #settimanaBtn, body.locked #weekSec { display: none !important; }
+
 @media (max-width: 560px) {
   .hero { padding: 18px; }
   h1 { font-size: 40px; }
@@ -352,6 +373,7 @@ body.locked .lane, body.locked .bar, body.locked .todo-card { cursor: default; }
         <input type="date" id="giorno" aria-label="Giorno">
         <button class="btn icon" id="next" type="button" aria-label="Giorno successivo">&rarr;</button>
       </div>
+      <button class="btn" id="settimanaBtn" type="button">Tabella settimana</button>
       <button class="btn" id="foto" type="button">Foto del giorno</button>
       <button class="btn" id="fotoSett" type="button">Foto della settimana</button>
       <input type="file" id="fotoInput" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
@@ -389,6 +411,25 @@ body.locked .lane, body.locked .bar, body.locked .todo-card { cursor: default; }
     <p class="set-note">La chiave resta solo su questo dispositivo e non entra mai nel file del piano. Ogni lettura di una foto è addebitata sul tuo account Anthropic. Sui tablet che servono solo a consultare il piano non serve.</p>
     <div class="actions"><button class="btn primary" id="cfgSave" type="button">Salva impostazioni</button></div>
     <div class="msg" id="cfgMsg" role="status" aria-live="polite"></div>
+  </section>
+
+  <section class="panel" id="weekSec" hidden aria-labelledby="weekTitle">
+    <h2 id="weekTitle">Tabella della settimana</h2>
+    <div class="wk-top">
+      <div class="days">
+        <button class="btn icon" id="wkPrev" type="button" aria-label="Settimana precedente">&larr;</button>
+        <label class="wk-lbl" for="wkLun">Settimana dal</label>
+        <input type="date" id="wkLun">
+        <button class="btn icon" id="wkNext" type="button" aria-label="Settimana successiva">&rarr;</button>
+      </div>
+      <p class="wk-help">Scrivi <b>7-13</b> &middot; spezzato <b>7-13/17-21</b> &middot; chiusura <b>15.30-24</b> &middot; <b>R</b> riposo &middot; <b>F</b> ferie &middot; vuoto se non lavora. Per chi va chiesto aggiungi <b>B</b> (box) o <b>C</b> (cassa), es. <b>14-21 B</b>; se non lo scrivi te lo chiedo quando apri il giorno.</p>
+    </div>
+    <div class="wk-wrap"><table class="wk" id="wkTable"></table></div>
+    <div class="actions wk-actions">
+      <button class="btn primary" id="wkGo" type="button">Pianifica settimana</button>
+      <button class="btn" id="wkNo" type="button" hidden>Annulla</button>
+    </div>
+    <div class="msg" id="wkMsg" role="status" aria-live="polite"></div>
   </section>
 
   <div class="stats" id="stats"></div>
@@ -1942,6 +1983,145 @@ body.locked .lane, body.locked .bar, body.locked .todo-card { cursor: default; }
     Object.keys(d.assenze || {}).forEach(function (g) { lsSet("assenze:" + g, JSON.stringify(d.assenze[g])); });
     if (d.config) lsSet(CFG_KEY, JSON.stringify(d.config));
     location.reload();
+  });
+
+  /* ---------- tabella settimanale ---------- */
+  var DOWN = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
+  var wk = { lun: null, armato: false };
+  function persTabella() { return CFG.staff.filter(function (n) { return !inLista(n, ESCLUSI) && !lunga(n); }); }
+  function hm(t) { if (t === "00:00") return "24"; var h = Number(t.slice(0, 2)), m = t.slice(3); return String(h) + (m === "00" ? "" : "." + m); }
+  function ruolo(nome) {
+    if (inLista(nome, ACC_FISSA)) return "box";
+    if (inLista(nome, ACC_CHIEDI)) return "casse o box";
+    if (casseAmmesse(nome)) return "casse 7-10";
+    return "";
+  }
+  function cellaDa(g, nome) {
+    var n = nome.toLowerCase();
+    var a = localLoad("assenze", g).filter(function (x) { return x.nome.toLowerCase() === n; })[0];
+    if (a) return a.tipo === "ferie" ? "F" : "R";
+    return localLoad("turni", g).filter(function (x) { return x.nome.toLowerCase() === n; })
+      .sort(function (x, y) { return SLOTS.indexOf(x.da) - SLOTS.indexOf(y.da); })
+      .map(function (x) {
+        var suf = inLista(nome, ACC_CHIEDI) ? (x.dest === "accoglienza" ? " B" : x.dest === "casse" ? " C" : "") : (x.dest === "accoglienza" && !inLista(nome, ACC_FISSA) ? " B" : "");
+        return hm(x.da) + "-" + hm(x.a) + suf;
+      }).join(" / ");
+  }
+  function leggiCella(txt) {
+    var t = String(txt || "").trim().toUpperCase();
+    if (!t) return { vuota: true };
+    if (/^(R|RIP|RIPOSO)$/.test(t)) return { tipo: "riposo" };
+    if (/^(F|FER|FERIE)$/.test(t)) return { tipo: "ferie" };
+    var parti = t.split(/\s*[\/,;+]\s*|\s+E\s+/).filter(Boolean), fasce = [];
+    for (var i = 0; i < parti.length; i++) {
+      var m = /^(\d{1,2}(?:[:.,]\d{2})?)\s*-\s*(\d{1,2}(?:[:.,]\d{2})?)\s*(B|BOX|C|CASSA|CASSE)?$/.exec(parti[i]);
+      if (!m) return { err: "non capisco «" + parti[i] + "» (scrivi per esempio 7-13, 15.30-21, R o F)" };
+      var d1 = toSlot(m[1]), d2 = toSlot(m[2]);
+      if (!d1 || !d2) return { err: "orario non valido in «" + parti[i] + "»" };
+      if (d1.fuori || d2.fuori) return { err: "«" + parti[i] + "» è fuori dall'orario 07:00-24:00" };
+      if (SLOTS.indexOf(d2.v) <= SLOTS.indexOf(d1.v)) return { err: "in «" + parti[i] + "» la fine viene prima dell'inizio" };
+      fasce.push({ da: d1.v, a: d2.v, dest: m[3] ? (m[3].charAt(0) === "B" ? "accoglienza" : "casse") : "" });
+    }
+    fasce.sort(function (x, y) { return SLOTS.indexOf(x.da) - SLOTS.indexOf(y.da); });
+    for (var k = 1; k < fasce.length; k++) if (SLOTS.indexOf(fasce[k].da) < SLOTS.indexOf(fasce[k - 1].a)) return { err: "due fasce si sovrappongono" };
+    return { fasce: fasce };
+  }
+  function segnaCella(inp) {
+    var c = leggiCella(inp.value);
+    inp.classList.toggle("err", !!c.err); inp.classList.toggle("rip", c.tipo === "riposo"); inp.classList.toggle("fer", c.tipo === "ferie");
+    inp.classList.toggle("box", !!(c.fasce && c.fasce.length && c.fasce.every(function (f) { return f.dest === "accoglienza"; })));
+    inp.title = c.err || "";
+    return c;
+  }
+  function wkReset() { wk.armato = false; $("wkGo").textContent = "Pianifica settimana"; $("wkGo").classList.remove("confirm"); $("wkNo").hidden = true; }
+  function renderWeek() {
+    wkReset();
+    $("wkLun").value = wk.lun;
+    var pers = persTabella(), days = DOWN.map(function (d, i) { return shiftDay(wk.lun, i); });
+    var tb = $("wkTable"); tb.innerHTML = "";
+    var hr = document.createElement("tr");
+    var h0 = document.createElement("th"); h0.className = "n"; h0.textContent = "Dipendente"; hr.appendChild(h0);
+    days.forEach(function (g, i) { var th = document.createElement("th"); th.textContent = DOWN[i] + " " + titolo(g).split(" ")[1]; hr.appendChild(th); });
+    var thead = document.createElement("thead"); thead.appendChild(hr); tb.appendChild(thead);
+    var body = document.createElement("tbody");
+    if (!pers.length) {
+      var tr0 = document.createElement("tr"); var td0 = document.createElement("td"); td0.colSpan = 8;
+      td0.textContent = "Nessun dipendente: aggiungili in Impostazioni o apri il file del piano."; tr0.appendChild(td0); body.appendChild(tr0);
+    }
+    pers.forEach(function (nome, i) {
+      var tr = document.createElement("tr");
+      var tn = document.createElement("td"); tn.className = "n"; tn.textContent = nome;
+      var r = ruolo(nome); if (r) { var sm = document.createElement("small"); sm.textContent = r; tn.appendChild(sm); }
+      tr.appendChild(tn);
+      days.forEach(function (g, d) {
+        var td = document.createElement("td"); var inp = document.createElement("input");
+        inp.type = "text"; inp.id = "wk-" + i + "-" + d; inp.autocomplete = "off"; inp.spellcheck = false;
+        inp.setAttribute("aria-label", nome + ", " + titolo(g));
+        inp.value = cellaDa(g, nome);
+        inp.addEventListener("input", function () { segnaCella(inp); wkReset(); });
+        segnaCella(inp);
+        td.appendChild(inp); tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+    tb.appendChild(body);
+    $("wkMsg").textContent = ""; $("wkMsg").className = "msg";
+  }
+  function apriSettimana(g) { wk.lun = mondayOf(g); renderWeek(); }
+  $("settimanaBtn").addEventListener("click", function () {
+    var sec = $("weekSec"); sec.hidden = !sec.hidden;
+    if (!sec.hidden) { apriSettimana(giorno); sec.scrollIntoView({ block: "start", behavior: "smooth" }); }
+  });
+  $("wkPrev").addEventListener("click", function () { apriSettimana(shiftDay(wk.lun, -7)); });
+  $("wkNext").addEventListener("click", function () { apriSettimana(shiftDay(wk.lun, 7)); });
+  $("wkLun").addEventListener("change", function () { if (this.value) apriSettimana(this.value); });
+  $("wkNo").addEventListener("click", wkReset);
+  $("wkGo").addEventListener("click", async function () {
+    if (!canWrite) return;
+    var pers = persTabella(), days = DOWN.map(function (d, i) { return shiftDay(wk.lun, i); }), errs = [];
+    var piano = {}; days.forEach(function (g) { piano[g] = { turni: [], assenze: [] }; });
+    pers.forEach(function (nome, i) {
+      days.forEach(function (g, d) {
+        var c = segnaCella($("wk-" + i + "-" + d));
+        if (c.err) errs.push(nome + ", " + DOWN[d] + ": " + c.err);
+        else if (c.tipo) piano[g].assenze.push({ nome: nome, tipo: c.tipo });
+        else if (c.fasce) c.fasce.forEach(function (f) { piano[g].turni.push({ nome: nome, da: f.da, a: f.a, dest: f.dest }); });
+      });
+    });
+    var m = $("wkMsg");
+    if (errs.length) { m.className = "msg"; m.textContent = "Da correggere (caselle in rosso): " + errs.slice(0, 4).join("; ") + (errs.length > 4 ? "; e altre " + (errs.length - 4) + "." : "."); return; }
+    if (!wk.armato) {
+      wk.armato = true; this.classList.add("confirm"); $("wkNo").hidden = false;
+      this.textContent = "Conferma: pianifica dal " + titolo(days[0]).split(" ")[1] + " al " + titolo(days[6]).split(" ")[1];
+      m.className = "msg ok"; m.textContent = "I turni di queste persone in questa settimana vengono sostituiti da quelli della tabella, poi casse e box vengono assegnati con le regole.";
+      return;
+    }
+    wkReset(); this.disabled = true;
+    try {
+      var nomi = pers.map(function (n) { return n.toLowerCase(); }), seq = 0, nt = 0, na = 0, stamp = Date.now().toString(36);
+      days.forEach(function (g) {
+        var restaT = localLoad("turni", g).filter(function (x) { return nomi.indexOf(x.nome.toLowerCase()) < 0; });
+        var restaA = localLoad("assenze", g).filter(function (x) { return nomi.indexOf(x.nome.toLowerCase()) < 0; });
+        piano[g].turni.forEach(function (t) { restaT.push({ id: "w" + stamp + (seq++), giorno: g, nome: t.nome, riga: "", da: t.da, a: t.a, dest: t.dest }); nt++; });
+        piano[g].assenze.forEach(function (x) { restaA.push({ id: "w" + stamp + (seq++), giorno: g, nome: x.nome, tipo: x.tipo }); na++; });
+        localSave("turni", g, restaT); localSave("assenze", g, restaA);
+      });
+      await rigenera(days);
+      var dec = 0, senza = 0;
+      days.forEach(function (g) { localLoad("turni", g).forEach(function (x) { var c = collocazione(x); if (c === "da decidere") dec++; else if (!c && !x.riga) senza++; }); });
+      setDay(wk.lun);
+      m.className = "msg ok";
+      m.textContent = "Settimana pianificata: " + nt + " turni e " + na + " tra riposi e ferie." +
+        (senza ? " " + senza + " turni senza cassa libera (Da assegnare)." : "") +
+        (dec ? " " + dec + " turni da decidere tra casse e box: te lo chiedo quando apri il giorno." : "") +
+        " Il foglio è sul lunedì: usa le frecce in alto per scorrere i giorni.";
+      renderWeek();
+      m.className = "msg ok";
+      m.textContent = "Settimana pianificata: " + nt + " turni e " + na + " tra riposi e ferie." +
+        (senza ? " " + senza + " turni senza cassa libera (Da assegnare)." : "") +
+        (dec ? " " + dec + " turni da decidere tra casse e box: te lo chiedo quando apri il giorno." : "");
+    } catch (e) { m.className = "msg"; m.textContent = "Qualcosa non è andato: riprova."; }
+    finally { this.disabled = false; }
   });
 
   /* ---------- PIN: accesso completo o sola consultazione ---------- */
