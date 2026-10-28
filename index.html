@@ -228,7 +228,7 @@ form { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
 .todo-card small { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
 
 /* riposi e ferie */
-.ass { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.ass { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 14px; }
 .ass-col { border-radius: 12px; padding: 12px 14px; background: var(--gs); min-width: 0; }
 .ass-col h3 { margin: 0 0 8px; font-family: var(--font-display); font-weight: 700; font-size: 18px; color: var(--g); display: flex; align-items: baseline; gap: 8px; }
 .ass-col h3 span { font-family: var(--font-body); font-size: 12px; font-weight: 600; color: var(--fg); opacity: .7; }
@@ -326,6 +326,9 @@ body.locked .lane, body.locked .bar, body.locked .todo-card { cursor: default; }
 
 /* tabella settimanale */
 .wk-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 20px; margin-bottom: 12px; }
+.wk-top .days { flex-wrap: wrap; min-width: 0; }
+.wk-top input[type="date"] { min-width: 0; max-width: 100%; }
+@media (max-width: 560px) { .wk .n { min-width: 120px; white-space: normal; } }
 .wk-lbl { font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
 .wk-help { margin: 0; font-size: 13px; color: var(--muted); flex: 1 1 380px; min-width: 0; }
 .wk-help b { color: var(--fg); font-variant-numeric: tabular-nums; }
